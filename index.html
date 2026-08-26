@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Wing Equipment Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- localForage for larger storage capacity (IndexedDB) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+    
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-900 text-white flex flex-col hidden md:flex">
+            <div class="p-6">
+                <h1 class="text-2xl font-bold tracking-wider">Media Wing<br><span class="text-sm font-normal text-gray-400">Manager</span></h1>
+            </div>
+            <nav class="flex-1 px-4 space-y-2">
+                <a href="#" class="nav-link active block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="dashboard">
+                    <i class="fas fa-home mr-2"></i> Dashboard
+                </a>
+                <a href="#" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="inventory">
+                    <i class="fas fa-boxes mr-2"></i> Inventory
+                </a>
+                <a href="#" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="checkout">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Checkout (Take)
+                </a>
+                <a href="#" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="checkin">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Check-in (Return)
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            
+            <!-- Mobile Header -->
+            <header class="bg-white shadow-sm p-4 md:hidden flex justify-between items-center">
+                <h1 class="text-xl font-bold">Media Wing Manager</h1>
+                <button id="mobile-menu-btn" class="text-gray-600 focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </header>
+
+            <div class="p-6 md:p-10 flex-1">
+                
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="content-section active-section">
+                    <h2 class="text-3xl font-semibold mb-6">Dashboard</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
+                            <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Total Equipment</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2" id="stat-total-items">0</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-yellow-500">
+                            <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Active Programs</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2" id="stat-active-programs">0</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-green-500">
+                            <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider">Items Checked Out</h3>
+                            <p class="text-3xl font-bold text-gray-800 mt-2" id="stat-items-out">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Inventory Section -->
+                <section id="inventory" class="content-section hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-semibold">Inventory Management</h2>
+                        <button onclick="toggleModal('add-item-modal')" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
+                            <i class="fas fa-plus mr-2"></i>Add Equipment
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ownership</th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Qty</th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Inventory items will be injected here via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Checkout Section -->
+                <section id="checkout" class="content-section hidden">
+                    <h2 class="text-3xl font-semibold mb-6">Checkout Equipment</h2>
+                    
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-xl font-medium mb-4 border-b pb-2">1. Select or Create Program</h3>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Active Programs</label>
+                                <select id="checkout-program-select" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                                    <option value="">-- Select a Program --</option>
+                                    <!-- Options injected via JS -->
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <span class="text-gray-500 mb-2 mx-2">OR</span>
+                                <button onclick="toggleModal('create-program-modal')" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 transition w-full md:w-auto">
+                                    <i class="fas fa-calendar-plus mr-2"></i>New Program
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="checkout-items-section" class="bg-white rounded-lg shadow p-6 hidden">
+                        <h3 class="text-xl font-medium mb-4 border-b pb-2">2. Take Equipment</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Select Equipment</label>
+                            <div class="flex gap-2">
+                                <select id="checkout-equipment-select" class="flex-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                                    <option value="">-- Select Equipment --</option>
+                                    <!-- Options injected via JS -->
+                                </select>
+                                <input type="number" id="checkout-qty" min="1" value="1" class="w-24 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Qty">
+                                <button id="add-to-checkout-btn" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <h4 class="font-medium text-gray-700 mb-2">Items Selected for Checkout</h4>
+                            <ul id="checkout-cart" class="border rounded-md divide-y divide-gray-200 mb-4 bg-gray-50 min-h-[100px] p-2">
+                                <li class="text-gray-500 text-sm p-2 text-center" id="empty-cart-msg">No items selected yet.</li>
+                                <!-- Cart items -->
+                            </ul>
+                            
+                            <button id="confirm-checkout-btn" class="w-full bg-gray-800 text-white px-4 py-3 rounded shadow hover:bg-gray-900 transition font-semibold disabled:opacity-50" disabled>
+                                Confirm Checkout
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Check-in Section -->
+                <section id="checkin" class="content-section hidden">
+                    <h2 class="text-3xl font-semibold mb-6">Check-in / Verification</h2>
+                    
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Program to Return From</label>
+                        <select id="checkin-program-select" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                            <option value="">-- Select a Program --</option>
+                            <!-- Options injected via JS -->
+                        </select>
+                    </div>
+
+                    <div id="checkin-items-section" class="bg-white rounded-lg shadow p-6 hidden">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h3 class="text-xl font-medium">Verify & Return Equipment</h3>
+                            <button id="complete-program-btn" class="bg-green-600 text-white px-3 py-1 text-sm rounded shadow hover:bg-green-700 transition">
+                                Mark Program as Completed
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Taken</th>
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Returned</th>
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="checkin-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Check-in items injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Add Item Modal -->
+    <div id="add-item-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50 overflow-y-auto pt-10 pb-10">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-auto">
+            <div class="flex justify-between items-center p-4 border-b sticky top-0 bg-white rounded-t-lg z-10">
+                <h3 class="text-lg font-semibold">Add New Equipment</h3>
+                <button onclick="toggleModal('add-item-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="add-equipment-form" class="p-6 max-h-[80vh] overflow-y-auto">
+                
+                <!-- Basic Info -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Equipment Name</label>
+                    <input type="text" id="eq-name" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="eq-category" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Camera">Camera & Lenses</option>
+                            <option value="Audio">Audio & Mics</option>
+                            <option value="Lighting">Lighting</option>
+                            <option value="Cables">Cables & Wires</option>
+                            <option value="Accessories">Accessories</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Quantity</label>
+                        <input type="number" id="eq-qty" min="1" value="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Product Photo -->
+                <div class="mb-4 p-3 bg-gray-50 border rounded">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product Photo</label>
+                    <input type="file" id="eq-photo" accept="image/*" class="w-full text-sm">
+                </div>
+
+                <!-- Ownership Section -->
+                <div class="mb-4 border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ownership Type</label>
+                    <div class="flex gap-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="ownership" value="Public" checked class="form-radio text-blue-600" onchange="toggleOwnershipFields()">
+                            <span class="ml-2">Public (Funded/Group)</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="ownership" value="Personal" class="form-radio text-blue-600" onchange="toggleOwnershipFields()">
+                            <span class="ml-2">Personal</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Conditional Fields: Public -->
+                <div id="public-fields" class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded">
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Price Details (₹)</label>
+                        <input type="number" id="eq-price" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 5000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Bill / Receipt</label>
+                        <input type="file" id="eq-bill" accept="image/*,.pdf" class="w-full text-sm">
+                    </div>
+                </div>
+
+                <!-- Conditional Fields: Personal -->
+                <div id="personal-fields" class="mb-4 p-3 bg-yellow-50 border border-yellow-100 rounded hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Owner's Name</label>
+                    <input type="text" id="eq-owner" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter owner's name">
+                </div>
+                
+                <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+                    <button type="button" onclick="toggleModal('add-item-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Item Details Modal -->
+    <div id="view-item-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold" id="view-title">Equipment Details</h3>
+                <button onclick="toggleModal('view-item-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6" id="view-content">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Program Modal -->
+    <div id="create-program-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold">Create New Program</h3>
+                <button onclick="toggleModal('create-program-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="create-program-form" class="p-4">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Program Name / Location</label>
+                    <input type="text" id="prog-name" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input type="date" id="prog-date" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="toggleModal('create-program-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Create Program</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Check-in Action Modal -->
+    <div id="return-item-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold">Return Item</h3>
+                <button onclick="toggleModal('return-item-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="return-item-form" class="p-4">
+                <input type="hidden" id="return-prog-id">
+                <input type="hidden" id="return-eq-id">
+                <div class="mb-4 text-center">
+                    <p class="font-medium text-lg" id="return-item-name">Item Name</p>
+                    <p class="text-sm text-gray-500">Taken: <span id="return-item-taken">0</span> | Already Returned: <span id="return-item-already">0</span></p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity Returning Now</label>
+                    <input type="number" id="return-qty" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg">
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="toggleModal('return-item-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Confirm Return</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
