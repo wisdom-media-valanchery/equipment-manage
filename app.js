@@ -264,21 +264,19 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
 });
 
 document.getElementById('search-inventory').addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    let filtered = equipment.filter(item => 
-        (item.customId && item.customId.toLowerCase().includes(term)) || 
-        (item.name && item.name.toLowerCase().includes(term))
-    );
+    const term = e.target.value.toLowerCase().trim();
+    if (!term) {
+        renderInventory(equipment);
+        return;
+    }
 
-    filtered.sort((a, b) => {
-        const aStarts = (a.name && a.name.toLowerCase().startsWith(term)) || (a.customId && a.customId.toLowerCase().startsWith(term)) ? 1 : 0;
-        const bStarts = (b.name && b.name.toLowerCase().startsWith(term)) || (b.customId && b.customId.toLowerCase().startsWith(term)) ? 1 : 0;
-        
-        if (aStarts !== bStarts) {
-            return bStarts - aStarts;
-        }
-        return (a.name || '').localeCompare(b.name || '');
+    let filtered = equipment.filter(item => {
+        const idMatch = item.customId && item.customId.toLowerCase().startsWith(term);
+        const nameMatch = item.name && item.name.toLowerCase().split(' ').some(word => word.startsWith(term));
+        return idMatch || nameMatch;
     });
+
+    filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     renderInventory(filtered);
 });
