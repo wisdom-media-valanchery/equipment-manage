@@ -693,11 +693,11 @@ function renderCheckinTable() {
             </td>
             <td class="px-4 py-3 text-sm text-center space-x-2">
                 <button onclick="openReturnModal('${eq.id}', '${eq.name}', ${item.qtyTaken}, ${item.qtyReturned})" 
-                        class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs hover:bg-blue-200">
-                    <i class="fas fa-edit"></i> Edit
+                        class="${item.qtyReturned > 0 ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} px-3 py-1 rounded text-xs font-medium transition-colors">
+                    ${item.qtyReturned > 0 ? '<i class="fas fa-edit"></i> Edit Return' : '<i class="fas fa-undo"></i> Return'}
                 </button>
                 <button onclick="removeCheckoutItem('${eq.id}')" 
-                        class="text-red-500 hover:text-red-700 text-xs" title="Remove from Program">
+                        class="text-red-500 hover:text-red-700 text-xs ml-2" title="Remove from Program">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
