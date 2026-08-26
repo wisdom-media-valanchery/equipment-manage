@@ -405,6 +405,46 @@ function renderInventory(listToRender = equipment) {
     });
 }
 
+window.openEditModal = function(id) {
+    if (currentUserRole !== 'admin') return;
+    const item = equipment.find(e => e.id === id);
+    if (!item) return;
+
+    document.getElementById('edit-item-id').value = item.id;
+    document.getElementById('edit-item-name').value = item.name;
+    document.getElementById('edit-item-custom-id').value = item.customId || '';
+    document.getElementById('edit-item-desc').value = item.desc || '';
+    document.getElementById('edit-item-qty').value = item.totalQty;
+
+    toggleModal('edit-item-modal');
+};
+
+document.getElementById('edit-item-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (currentUserRole !== 'admin') return;
+
+    const id = document.getElementById('edit-item-id').value;
+    const item = equipment.find(e => e.id === id);
+    if (!item) return;
+
+    item.name = document.getElementById('edit-item-name').value.trim();
+    item.customId = document.getElementById('edit-item-custom-id').value.trim();
+    item.desc = document.getElementById('edit-item-desc').value.trim();
+    
+    const newTotal = parseInt(document.getElementById('edit-item-qty').value);
+    const diff = newTotal - item.totalQty;
+    item.totalQty = newTotal;
+    item.availableQty += diff;
+    if (item.availableQty < 0) item.availableQty = 0;
+
+    toggleModal('edit-item-modal');
+    updateDashboard();
+    renderInventory();
+    
+    showToast('Equipment updated successfully.');
+    saveData().catch(err => console.error(err));
+});
+
 window.viewEquipment = async function(id) {
     const item = equipment.find(e => e.id === id);
     if(!item) return;
@@ -851,25 +891,40 @@ document.getElementById('complete-program-btn').addEventListener('click', () => 
     const pendingItems = checkoutRecord.items.filter(i => i.qtyReturned < i.qtyTaken);
 
     if (pendingItems.length > 0) {
-        if(!confirm('There are still items pending return! If you close this program, they will be permanently recorded as NOT returned. Do you want to continue?')) {
-            return;
-        }
+        const listEl = document.getElementById('missing-items-list');
+        listEl.innerHTML = '';
+        pendingItems.forEach(item => {
+            const eq = equipment.find(e => e.id === item.equipmentId);
+            const eqName = eq ? eq.name : 'Unknown Item';
+            const missingQty = item.qtyTaken - item.qtyReturned;
+            listEl.innerHTML += `<li><span class="font-semibold">${eqName}</span> (Missing: <span class="text-red-600 font-bold">${missingQty}</span>)</li>`;
+        });
+        toggleModal('missing-items-modal');
     } else {
         if(!confirm('All items returned! Mark this program as Completed?')) return;
+        confirmCompleteWithMissing();
     }
+});
 
+window.confirmCompleteWithMissing = function() {
+    if(!selectedCheckinProgramId) return;
     const prog = programs.find(p => p.id === selectedCheckinProgramId);
+    if (!prog) return;
+    
     prog.status = 'Completed';
     
-    // Optimistic Update
     updateDashboard();
     renderCheckinOptions();
     document.getElementById('checkin-items-section').classList.add('hidden');
-    showToast('Program completed and items returned to stock.');
-
-    // Background Save
+    
+    const modal = document.getElementById('missing-items-modal');
+    if (!modal.classList.contains('hidden')) {
+        toggleModal('missing-items-modal');
+    }
+    
+    showToast('Program completed.');
     saveData().catch(err => console.error(err));
-});
+};
 
 
 function renderHistoryTable(searchTerm = '') {
