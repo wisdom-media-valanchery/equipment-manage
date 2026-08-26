@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -184,9 +184,8 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
         const photoFile = document.getElementById('eq-photo').files[0];
         if (photoFile) {
             submitBtn.textContent = 'Uploading Photo...';
-            const b64 = await fileToBase64(photoFile);
             const storageRef = ref(storage, `photos/${eqId}_${photoFile.name}`);
-            await uploadString(storageRef, b64, 'data_url');
+            await uploadBytes(storageRef, photoFile);
             photoUrl = await getDownloadURL(storageRef);
         }
 
@@ -198,9 +197,8 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             const billFile = document.getElementById('eq-bill').files[0];
             if (billFile) {
                 submitBtn.textContent = 'Uploading Bill...';
-                const b64 = await fileToBase64(billFile);
                 const storageRef = ref(storage, `bills/${eqId}_${billFile.name}`);
-                await uploadString(storageRef, b64, 'data_url');
+                await uploadBytes(storageRef, billFile);
                 billUrl = await getDownloadURL(storageRef);
             }
         } else {
