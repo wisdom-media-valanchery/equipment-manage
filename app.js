@@ -1,38 +1,61 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDx2ThlvOBz9h_kRcZbjZbo3G2kKizMI64",
+  authDomain: "wisdom-media-valanchery.firebaseapp.com",
+  projectId: "wisdom-media-valanchery",
+  storageBucket: "wisdom-media-valanchery.firebasestorage.app",
+  messagingSenderId: "1007163293908",
+  appId: "1:1007163293908:web:81d32bfb8b27726d187b41"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
 // --- State Management ---
 let equipment = [];
 let programs = [];
 let checkouts = [];
 
-// Initialize localForage (IndexedDB wrapper)
-localforage.config({
-    name: 'MediaWingManager'
-});
-
 async function initData() {
     try {
-        const storedEq = await localforage.getItem('media_equipment');
-        const storedProg = await localforage.getItem('media_programs');
-        const storedCheck = await localforage.getItem('media_checkouts');
+        const docRef = doc(db, "mediaWing", "mainData");
+        const docSnap = await getDoc(docRef);
         
-        equipment = storedEq || [];
-        programs = storedProg || [];
-        checkouts = storedCheck || [];
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            equipment = data.equipment || [];
+            programs = data.programs || [];
+            checkouts = data.checkouts || [];
+        } else {
+            console.log("No existing data found, creating empty structure.");
+            await setDoc(docRef, { equipment: [], programs: [], checkouts: [] });
+        }
         
         updateDashboard();
         renderInventory();
     } catch (err) {
-        console.error("Error loading data from IndexedDB", err);
+        console.error("Error loading data from Firebase", err);
+        showToast('Error loading data from server.', 'error');
     }
 }
 
 async function saveData() {
     try {
-        await localforage.setItem('media_equipment', equipment);
-        await localforage.setItem('media_programs', programs);
-        await localforage.setItem('media_checkouts', checkouts);
+        const docRef = doc(db, "mediaWing", "mainData");
+        await setDoc(docRef, {
+            equipment,
+            programs,
+            checkouts
+        });
         updateDashboard();
     } catch (err) {
-        console.error("Error saving data", err);
+        console.error("Error saving data to Firebase", err);
+        showToast('Error saving data to server.', 'error');
     }
 }
 
@@ -61,15 +84,12 @@ navLinks.forEach(link => {
         e.preventDefault();
         const targetId = link.getAttribute('data-target');
         
-        // Update active nav
         navLinks.forEach(n => n.classList.remove('active', 'border-l-4', 'border-blue-500'));
         link.classList.add('active');
 
-        // Update active section
         sections.forEach(s => s.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
-        // Close mobile sidebar if open
         if (window.innerWidth < 768) {
             const sidebar = document.querySelector('aside');
             if (!sidebar.classList.contains('hidden')) {
@@ -78,14 +98,12 @@ navLinks.forEach(link => {
             }
         }
 
-        // Trigger specific logic on tab load
         if(targetId === 'inventory') renderInventory();
         if(targetId === 'checkout') renderCheckoutOptions();
         if(targetId === 'checkin') renderCheckinOptions();
     });
 });
 
-// Mobile menu toggle
 document.getElementById('mobile-menu-btn').addEventListener('click', () => {
     const sidebar = document.querySelector('aside');
     sidebar.classList.toggle('hidden');
@@ -94,13 +112,13 @@ document.getElementById('mobile-menu-btn').addEventListener('click', () => {
     sidebar.classList.toggle('h-full');
 });
 
-// --- Modal Logic ---
-function toggleModal(modalId) {
+// Expose functions to window for HTML inline event handlers
+window.toggleModal = function(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.toggle('hidden');
 }
 
-function toggleOwnershipFields() {
+window.toggleOwnershipFields = function() {
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
     if (ownership === 'Personal') {
         document.getElementById('personal-fields').classList.remove('hidden');
@@ -111,7 +129,6 @@ function toggleOwnershipFields() {
     }
 }
 
-// --- Toast Notifications ---
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast ${type} show`;
@@ -124,7 +141,6 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- Dashboard Logic ---
 function updateDashboard() {
     const totalItems = equipment.reduce((sum, item) => sum + parseInt(item.totalQty), 0);
     const activeProgs = programs.filter(p => p.status === 'Active').length;
@@ -150,53 +166,70 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
+    submitBtn.textContent = 'Saving to Firebase...';
 
+    const eqId = generateId();
     const name = document.getElementById('eq-name').value;
     const category = document.getElementById('eq-category').value;
     const qty = parseInt(document.getElementById('eq-qty').value);
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
     
-    // Optional Fields
-    const photoFile = document.getElementById('eq-photo').files[0];
-    const photoBase64 = await fileToBase64(photoFile);
+    let photoUrl = null;
+    let billUrl = null;
 
-    let price = '';
-    let billBase64 = null;
-    let ownerName = '';
+    try {
+        const photoFile = document.getElementById('eq-photo').files[0];
+        if (photoFile) {
+            const b64 = await fileToBase64(photoFile);
+            const storageRef = ref(storage, `photos/${eqId}_${photoFile.name}`);
+            await uploadString(storageRef, b64, 'data_url');
+            photoUrl = await getDownloadURL(storageRef);
+        }
 
-    if (ownership === 'Public') {
-        price = document.getElementById('eq-price').value;
-        const billFile = document.getElementById('eq-bill').files[0];
-        billBase64 = await fileToBase64(billFile);
-    } else {
-        ownerName = document.getElementById('eq-owner').value;
+        let price = '';
+        let ownerName = '';
+
+        if (ownership === 'Public') {
+            price = document.getElementById('eq-price').value;
+            const billFile = document.getElementById('eq-bill').files[0];
+            if (billFile) {
+                const b64 = await fileToBase64(billFile);
+                const storageRef = ref(storage, `bills/${eqId}_${billFile.name}`);
+                await uploadString(storageRef, b64, 'data_url');
+                billUrl = await getDownloadURL(storageRef);
+            }
+        } else {
+            ownerName = document.getElementById('eq-owner').value;
+        }
+
+        const newItem = {
+            id: eqId,
+            name,
+            category,
+            totalQty: qty,
+            availableQty: qty,
+            ownership,
+            ownerName,
+            price,
+            photo: photoUrl,
+            bill: billUrl
+        };
+
+        equipment.push(newItem);
+        await saveData();
+        
+        renderInventory();
+        toggleModal('add-item-modal');
+        e.target.reset();
+        toggleOwnershipFields();
+        showToast('Equipment added successfully!');
+    } catch (error) {
+        console.error("Error uploading", error);
+        alert("Failed to upload. See console for details.");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Item';
     }
-
-    const newItem = {
-        id: generateId(),
-        name,
-        category,
-        totalQty: qty,
-        availableQty: qty,
-        ownership,
-        ownerName,
-        price,
-        photo: photoBase64,
-        bill: billBase64
-    };
-
-    equipment.push(newItem);
-    await saveData();
-    
-    renderInventory();
-    toggleModal('add-item-modal');
-    e.target.reset();
-    toggleOwnershipFields(); // reset visibility
-    
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Save Item';
-    showToast('Equipment added successfully!');
 });
 
 function renderInventory() {
@@ -233,7 +266,7 @@ function renderInventory() {
     });
 }
 
-function viewEquipment(id) {
+window.viewEquipment = function(id) {
     const item = equipment.find(e => e.id === id);
     if(!item) return;
 
@@ -254,12 +287,7 @@ function viewEquipment(id) {
     } else {
         content += `<p><span class="text-gray-500 text-sm">Price:</span> <span class="font-medium">₹${item.price || 'Not specified'}</span></p>`;
         if(item.bill) {
-            // Check if PDF or Image
-            if(item.bill.startsWith('data:application/pdf')) {
-                content += `<div class="mt-2"><a href="${item.bill}" download="${item.name}_bill.pdf" class="text-blue-600 hover:underline"><i class="fas fa-download"></i> Download Bill (PDF)</a></div>`;
-            } else {
-                content += `<div class="mt-2"><p class="text-sm text-gray-500 mb-1">Bill/Receipt:</p><img src="${item.bill}" alt="Bill" class="max-w-full h-auto max-h-48 border rounded shadow-sm"></div>`;
-            }
+            content += `<div class="mt-2"><p class="text-sm text-gray-500 mb-1">Bill/Receipt:</p><a href="${item.bill}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-external-link-alt"></i> View Full Bill</a><br><img src="${item.bill}" alt="Bill" class="max-w-full h-auto max-h-48 border rounded shadow-sm mt-2"></div>`;
         }
     }
     content += `</div>`;
@@ -268,7 +296,8 @@ function viewEquipment(id) {
         content += `
             <div class="mb-4 border-t pt-4">
                 <h4 class="font-semibold text-gray-700 mb-2">Product Photo</h4>
-                <img src="${item.photo}" alt="Product Photo" class="max-w-full h-auto max-h-64 border rounded shadow-sm">
+                <a href="${item.photo}" target="_blank" class="text-blue-600 hover:underline text-sm"><i class="fas fa-external-link-alt"></i> View Full Photo</a><br>
+                <img src="${item.photo}" alt="Product Photo" class="max-w-full h-auto max-h-64 border rounded shadow-sm mt-2">
             </div>
         `;
     }
@@ -277,8 +306,8 @@ function viewEquipment(id) {
     toggleModal('view-item-modal');
 }
 
-async function deleteEquipment(id) {
-    if(confirm('Are you sure you want to delete this equipment?')) {
+window.deleteEquipment = async function(id) {
+    if(confirm('Are you sure you want to delete this equipment from Firebase?')) {
         equipment = equipment.filter(e => e.id !== id);
         await saveData();
         renderInventory();
@@ -301,7 +330,6 @@ document.getElementById('create-program-form').addEventListener('submit', async 
 
     programs.push(newProgram);
     
-    // Create empty checkout record
     checkouts.push({
         programId: newProgram.id,
         items: []
@@ -310,9 +338,8 @@ document.getElementById('create-program-form').addEventListener('submit', async 
     await saveData();
     toggleModal('create-program-modal');
     e.target.reset();
-    showToast('Program created!');
+    showToast('Program created in Firebase!');
     
-    // Refresh selects
     renderCheckoutOptions();
     renderCheckinOptions();
 });
@@ -326,13 +353,11 @@ function renderCheckoutOptions() {
     const progSelect = document.getElementById('checkout-program-select');
     const eqSelect = document.getElementById('checkout-equipment-select');
     
-    // Populate active programs
     progSelect.innerHTML = '<option value="">-- Select a Program --</option>';
     programs.filter(p => p.status === 'Active').forEach(p => {
         progSelect.innerHTML += `<option value="${p.id}">${p.name} (${p.date})</option>`;
     });
 
-    // Populate available equipment
     eqSelect.innerHTML = '<option value="">-- Select Equipment --</option>';
     equipment.filter(e => e.availableQty > 0).forEach(e => {
         eqSelect.innerHTML += `<option value="${e.id}">${e.name} (Available: ${e.availableQty})</option>`;
@@ -345,7 +370,7 @@ document.getElementById('checkout-program-select').addEventListener('change', (e
     
     if (selectedCheckoutProgramId) {
         section.classList.remove('hidden');
-        currentCheckoutCart = []; // Reset cart for new program selection
+        currentCheckoutCart = [];
         renderCart();
     } else {
         section.classList.add('hidden');
@@ -361,7 +386,6 @@ document.getElementById('add-to-checkout-btn').addEventListener('click', () => {
 
     const item = equipment.find(e => e.id === eqId);
     
-    // Check if already in cart
     const existing = currentCheckoutCart.find(i => i.equipmentId === eqId);
     const requestedTotal = existing ? existing.qty + qty : qty;
 
@@ -380,7 +404,6 @@ document.getElementById('add-to-checkout-btn').addEventListener('click', () => {
 
 function renderCart() {
     const cartEl = document.getElementById('checkout-cart');
-    const emptyMsg = document.getElementById('empty-cart-msg');
     const btn = document.getElementById('confirm-checkout-btn');
 
     if (currentCheckoutCart.length === 0) {
@@ -401,7 +424,7 @@ function renderCart() {
     btn.disabled = false;
 }
 
-function removeFromCart(index) {
+window.removeFromCart = function(index) {
     currentCheckoutCart.splice(index, 1);
     renderCart();
 }
@@ -431,7 +454,7 @@ document.getElementById('confirm-checkout-btn').addEventListener('click', async 
     currentCheckoutCart = [];
     renderCart();
     renderCheckoutOptions(); 
-    showToast('Equipment checked out successfully!');
+    showToast('Equipment checked out (Synced with Firebase)!');
 });
 
 
@@ -499,7 +522,7 @@ function renderCheckinTable() {
     });
 }
 
-function openReturnModal(eqId, eqName, taken, returned) {
+window.openReturnModal = function(eqId, eqName, taken, returned) {
     document.getElementById('return-prog-id').value = selectedCheckinProgramId;
     document.getElementById('return-eq-id').value = eqId;
     document.getElementById('return-item-name').textContent = eqName;
@@ -558,9 +581,9 @@ document.getElementById('complete-program-btn').addEventListener('click', async 
     
     renderCheckinOptions();
     document.getElementById('checkin-items-section').classList.add('hidden');
-    showToast('Program marked as completed.');
+    showToast('Program marked as completed in Firebase.');
 });
 
 
-// Initialize app
+// Initialize app from Firebase
 initData();
