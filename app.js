@@ -120,12 +120,16 @@ window.toggleModal = function(modalId) {
 
 window.toggleOwnershipFields = function() {
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
+    const idInput = document.getElementById('eq-custom-id');
+
     if (ownership === 'Personal') {
         document.getElementById('personal-fields').classList.remove('hidden');
         document.getElementById('public-fields').classList.add('hidden');
+        if (idInput) idInput.placeholder = "e.g. P01, P02...";
     } else {
         document.getElementById('personal-fields').classList.add('hidden');
         document.getElementById('public-fields').classList.remove('hidden');
+        if (idInput) idInput.placeholder = "e.g. 01, 02...";
     }
 }
 
