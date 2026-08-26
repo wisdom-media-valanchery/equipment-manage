@@ -194,18 +194,21 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     const qty = parseInt(document.getElementById('eq-qty').value);
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
     
-    let hasPhoto = false;
+    let photoCount = 0;
     let hasBill = false;
 
     // We still await image compression because we need it for the document,
     // but canvas compression is very fast.
     try {
-        const photoFile = document.getElementById('eq-photo').files[0];
-        if (photoFile) {
-            submitBtn.textContent = 'Compressing Photo...';
-            const compressedPhoto = await compressImage(photoFile);
-            setDoc(doc(db, "mediaWingImages", eqId + "_photo"), { data: compressedPhoto }).catch(console.error);
-            hasPhoto = true;
+        const photoFiles = document.getElementById('eq-photo').files;
+        if (photoFiles.length > 0) {
+            const maxPhotos = Math.min(photoFiles.length, 4);
+            for (let i = 0; i < maxPhotos; i++) {
+                submitBtn.textContent = `Compressing Photo ${i+1}...`;
+                const compressedPhoto = await compressImage(photoFiles[i]);
+                setDoc(doc(db, "mediaWingImages", `${eqId}_photo_${i}`), { data: compressedPhoto }).catch(console.error);
+            }
+            photoCount = maxPhotos;
         }
 
         let price = '';
@@ -234,7 +237,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             ownership,
             ownerName,
             price,
-            hasPhoto,
+            photoCount,
             hasBill
         };
 
@@ -341,20 +344,23 @@ window.viewEquipment = async function(id) {
     }
     content += `</div>`;
 
-    if (item.hasPhoto) {
-        try {
-            const photoDoc = await getDoc(doc(db, "mediaWingImages", id + "_photo"));
-            if (photoDoc.exists()) {
-                content += `
-                    <div class="mb-4 border-t pt-4">
-                        <h4 class="font-semibold text-gray-700 mb-2">Product Photo</h4>
-                        <img src="${photoDoc.data().data}" alt="Product Photo" class="max-w-full h-auto max-h-64 border rounded shadow-sm mt-2">
-                    </div>
-                `;
+    if (item.photoCount && item.photoCount > 0) {
+        content += `
+            <div class="mb-4 border-t pt-4">
+                <h4 class="font-semibold text-gray-700 mb-2">Product Photo(s)</h4>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+        `;
+        for(let i=0; i<item.photoCount; i++) {
+            try {
+                const photoDoc = await getDoc(doc(db, "mediaWingImages", `${id}_photo_${i}`));
+                if (photoDoc.exists()) {
+                    content += `<img src="${photoDoc.data().data}" alt="Product Photo ${i+1}" class="w-full h-auto border rounded shadow-sm">`;
+                }
+            } catch(e) {
+                 console.error("Failed to load photo", e);
             }
-        } catch(e) {
-             console.error("Failed to load photo", e);
         }
+        content += `</div></div>`;
     }
 
     document.getElementById('view-content').innerHTML = content;
@@ -374,7 +380,14 @@ window.deleteEquipment = function(id) {
         saveData().catch(e => console.error(e));
         
         // Clean up images silently
-        if(item.hasPhoto) deleteDoc(doc(db, "mediaWingImages", id + "_photo")).catch(e=>console.log(e));
+        if (item.photoCount && item.photoCount > 0) {
+            for(let i=0; i<item.photoCount; i++) {
+                deleteDoc(doc(db, "mediaWingImages", `${id}_photo_${i}`)).catch(e=>console.log(e));
+            }
+        } else if (item.hasPhoto) {
+            // legacy single photo
+            deleteDoc(doc(db, "mediaWingImages", id + "_photo")).catch(e=>console.log(e));
+        }
         if(item.hasBill) deleteDoc(doc(db, "mediaWingImages", id + "_bill")).catch(e=>console.log(e));
     }
 }
