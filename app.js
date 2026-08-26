@@ -844,8 +844,9 @@ function renderHistoryTable(searchTerm = '') {
             <td class="px-4 py-3 text-sm text-center">
                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
             </td>
-            <td class="px-4 py-3 text-sm text-center">
+            <td class="px-4 py-3 text-sm text-center space-x-2">
                 <button onclick="viewHistoryDetails('${prog.id}')" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded border border-blue-200 shadow-sm transition">View Details</button>
+                <button onclick="deleteHistoryProgram('${prog.id}')" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded border border-red-200 shadow-sm transition"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -855,6 +856,27 @@ function renderHistoryTable(searchTerm = '') {
 document.getElementById('search-history')?.addEventListener('input', (e) => {
     renderHistoryTable(e.target.value);
 });
+
+window.deleteHistoryProgram = function(progId) {
+    if(!confirm("Are you sure you want to permanently delete this program's history? This action cannot be undone.")) return;
+
+    // Remove from checkouts
+    const checkoutIndex = checkouts.findIndex(c => c.programId === progId);
+    if (checkoutIndex > -1) {
+        checkouts.splice(checkoutIndex, 1);
+    }
+
+    // Remove from programs
+    const progIndex = programs.findIndex(p => p.id === progId);
+    if (progIndex > -1) {
+        programs.splice(progIndex, 1);
+    }
+
+    renderHistoryTable(document.getElementById('search-history')?.value || '');
+    updateDashboard(); 
+    showToast('Program history deleted successfully.');
+    saveData().catch(err => console.error(err));
+}
 
 window.viewHistoryDetails = function(progId) {
     const prog = programs.find(p => p.id === progId);
