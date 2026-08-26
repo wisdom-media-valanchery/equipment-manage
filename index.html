@@ -325,28 +325,28 @@
     </div>
 
     <!-- Check-in Action Modal -->
-    <div id="return-item-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="text-lg font-semibold">Return Item</h3>
-                <button onclick="toggleModal('return-item-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    <!-- Return Item Modal -->
+    <div id="return-item-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Update Return Status</h3>
+                <form id="return-item-form">
+                    <input type="hidden" id="return-prog-id">
+                    <input type="hidden" id="return-eq-id">
+                    <div class="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                        <p><strong>Item:</strong> <span id="return-item-name"></span></p>
+                        <p><strong>Total Taken:</strong> <span id="return-item-taken" class="font-bold"></span></p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Returned So Far</label>
+                        <input type="number" id="return-qty" required min="0" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-5 border-t pt-4">
+                        <button type="button" onclick="toggleModal('return-item-modal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Update Status</button>
+                    </div>
+                </form>
             </div>
-            <form id="return-item-form" class="p-4">
-                <input type="hidden" id="return-prog-id">
-                <input type="hidden" id="return-eq-id">
-                <div class="mb-4 text-center">
-                    <p class="font-medium text-lg" id="return-item-name">Item Name</p>
-                    <p class="text-sm text-gray-500">Taken: <span id="return-item-taken">0</span> | Already Returned: <span id="return-item-already">0</span></p>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity Returning Now</label>
-                    <input type="number" id="return-qty" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg">
-                </div>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" onclick="toggleModal('return-item-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Confirm Return</button>
-                </div>
-            </form>
         </div>
     </div>
 

@@ -622,11 +622,14 @@ function renderCheckinTable() {
                     ? '<span class="text-green-600"><i class="fas fa-check-circle"></i> OK</span>' 
                     : '<span class="text-red-500"><i class="fas fa-exclamation-triangle"></i> Pending</span>'}
             </td>
-            <td class="px-4 py-3 text-sm text-center">
+            <td class="px-4 py-3 text-sm text-center space-x-2">
                 <button onclick="openReturnModal('${eq.id}', '${eq.name}', ${item.qtyTaken}, ${item.qtyReturned})" 
-                        class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs hover:bg-blue-200 ${isFullyReturned ? 'opacity-50 cursor-not-allowed' : ''}" 
-                        ${isFullyReturned ? 'disabled' : ''}>
-                    Return
+                        class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs hover:bg-blue-200">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button onclick="removeCheckoutItem('${eq.id}')" 
+                        class="text-red-500 hover:text-red-700 text-xs" title="Remove from Program">
+                    <i class="fas fa-trash"></i>
                 </button>
             </td>
         `;
@@ -639,12 +642,10 @@ window.openReturnModal = function(eqId, eqName, taken, returned) {
     document.getElementById('return-eq-id').value = eqId;
     document.getElementById('return-item-name').textContent = eqName;
     document.getElementById('return-item-taken').textContent = taken;
-    document.getElementById('return-item-already').textContent = returned;
     
-    const maxReturnable = taken - returned;
     const qtyInput = document.getElementById('return-qty');
-    qtyInput.max = maxReturnable;
-    qtyInput.value = maxReturnable;
+    qtyInput.max = taken;
+    qtyInput.value = returned; // Pre-fill with current returned quantity
 
     toggleModal('return-item-modal');
 }
@@ -653,29 +654,57 @@ document.getElementById('return-item-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const progId = document.getElementById('return-prog-id').value;
     const eqId = document.getElementById('return-eq-id').value;
-    const returnQty = parseInt(document.getElementById('return-qty').value);
+    const newReturnedQty = parseInt(document.getElementById('return-qty').value);
 
     const checkoutRecord = checkouts.find(c => c.programId === progId);
     const itemRecord = checkoutRecord.items.find(i => i.equipmentId === eqId);
     
-    if (returnQty > (itemRecord.qtyTaken - itemRecord.qtyReturned)) {
-        return alert('Cannot return more than taken!');
+    if (newReturnedQty > itemRecord.qtyTaken || newReturnedQty < 0) {
+        return alert('Invalid quantity!');
     }
 
-    itemRecord.qtyReturned += returnQty;
+    const difference = newReturnedQty - itemRecord.qtyReturned;
+    
+    itemRecord.qtyReturned = newReturnedQty;
 
     const eq = equipment.find(e => e.id === eqId);
-    eq.availableQty += returnQty;
+    if (eq) {
+        eq.availableQty += difference;
+    }
 
     // Optimistic Update
     updateDashboard();
     toggleModal('return-item-modal');
     renderCheckinTable();
-    showToast(`${returnQty}x ${eq.name} returned!`);
+    showToast('Return status updated!');
 
     // Background Save
     saveData().catch(err => console.error(err));
 });
+
+window.removeCheckoutItem = function(eqId) {
+    if(!confirm("Are you sure you want to completely remove this item from the program?")) return;
+    
+    const checkoutRecord = checkouts.find(c => c.programId === selectedCheckinProgramId);
+    const itemIndex = checkoutRecord.items.findIndex(i => i.equipmentId === eqId);
+    
+    if (itemIndex > -1) {
+        const itemRecord = checkoutRecord.items[itemIndex];
+        const pendingQty = itemRecord.qtyTaken - itemRecord.qtyReturned;
+        
+        const eq = equipment.find(e => e.id === eqId);
+        if (eq && pendingQty > 0) {
+            eq.availableQty += pendingQty;
+        }
+        
+        checkoutRecord.items.splice(itemIndex, 1);
+        
+        updateDashboard();
+        renderCheckinTable();
+        showToast('Item removed from program.');
+        saveData().catch(err => console.error(err));
+    }
+}
 
 document.getElementById('complete-program-btn').addEventListener('click', () => {
     if(!selectedCheckinProgramId) return;
