@@ -125,11 +125,21 @@ window.toggleOwnershipFields = function() {
     if (ownership === 'Personal') {
         document.getElementById('personal-fields').classList.remove('hidden');
         document.getElementById('public-fields').classList.add('hidden');
-        if (idInput) idInput.placeholder = "e.g. P01, P02...";
+        if (idInput) {
+            idInput.placeholder = "e.g. P01, P02...";
+            if (idInput.value === "") {
+                idInput.value = "P";
+            }
+        }
     } else {
         document.getElementById('personal-fields').classList.add('hidden');
         document.getElementById('public-fields').classList.remove('hidden');
-        if (idInput) idInput.placeholder = "e.g. 01, 02...";
+        if (idInput) {
+            idInput.placeholder = "e.g. 01, 02...";
+            if (idInput.value === "P") {
+                idInput.value = "";
+            }
+        }
     }
 }
 
