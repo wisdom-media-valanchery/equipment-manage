@@ -265,10 +265,21 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
 
 document.getElementById('search-inventory').addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
-    const filtered = equipment.filter(item => 
+    let filtered = equipment.filter(item => 
         (item.customId && item.customId.toLowerCase().includes(term)) || 
         (item.name && item.name.toLowerCase().includes(term))
     );
+
+    filtered.sort((a, b) => {
+        const aStarts = (a.name && a.name.toLowerCase().startsWith(term)) || (a.customId && a.customId.toLowerCase().startsWith(term)) ? 1 : 0;
+        const bStarts = (b.name && b.name.toLowerCase().startsWith(term)) || (b.customId && b.customId.toLowerCase().startsWith(term)) ? 1 : 0;
+        
+        if (aStarts !== bStarts) {
+            return bStarts - aStarts;
+        }
+        return (a.name || '').localeCompare(b.name || '');
+    });
+
     renderInventory(filtered);
 });
 
