@@ -34,6 +34,22 @@ async function initData() {
             equipment = data.equipment || [];
             programs = data.programs || [];
             checkouts = data.checkouts || [];
+            
+            // Self-healing: Recalculate availableQty to fix any lost items
+            equipment.forEach(eq => {
+                let currentlyOut = 0;
+                checkouts.forEach(c => {
+                    const prog = programs.find(p => p.id === c.programId);
+                    if (prog && prog.status === 'Active') {
+                        const itemInProg = c.items.find(i => i.equipmentId === eq.id);
+                        if (itemInProg) {
+                            currentlyOut += (itemInProg.qtyTaken - itemInProg.qtyReturned);
+                        }
+                    }
+                });
+                eq.availableQty = eq.totalQty - currentlyOut;
+            });
+            
         } else {
             setDoc(docRef, { equipment: [], programs: [], checkouts: [] });
         }
@@ -663,12 +679,23 @@ document.getElementById('complete-program-btn').addEventListener('click', () => 
     if(!selectedCheckinProgramId) return;
     
     const checkoutRecord = checkouts.find(c => c.programId === selectedCheckinProgramId);
-    const hasPendingItems = checkoutRecord.items.some(i => i.qtyReturned < i.qtyTaken);
+    const pendingItems = checkoutRecord.items.filter(i => i.qtyReturned < i.qtyTaken);
 
-    if (hasPendingItems) {
-        if(!confirm('There are still items pending return! Are you sure you want to close this program? This will mark it as Completed, but items won\'t be returned to inventory automatically.')) {
+    if (pendingItems.length > 0) {
+        if(!confirm('There are still items pending return! Closing this program will AUTOMATICALLY return all of them to the stock. Do you want to continue?')) {
             return;
         }
+        
+        // Auto-return all pending items
+        pendingItems.forEach(itemRecord => {
+            const returnQty = itemRecord.qtyTaken - itemRecord.qtyReturned;
+            itemRecord.qtyReturned += returnQty;
+            
+            const eq = equipment.find(e => e.id === itemRecord.equipmentId);
+            if (eq) {
+                eq.availableQty += returnQty;
+            }
+        });
     } else {
         if(!confirm('All items returned! Mark this program as Completed?')) return;
     }
@@ -680,7 +707,7 @@ document.getElementById('complete-program-btn').addEventListener('click', () => 
     updateDashboard();
     renderCheckinOptions();
     document.getElementById('checkin-items-section').classList.add('hidden');
-    showToast('Program marked as completed.');
+    showToast('Program completed and items returned to stock.');
 
     // Background Save
     saveData().catch(err => console.error(err));
