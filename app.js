@@ -137,6 +137,7 @@ navLinks.forEach(link => {
         if(targetId === 'inventory') renderInventory();
         if(targetId === 'checkout') renderCheckoutOptions();
         if(targetId === 'checkin') renderCheckinOptions();
+        if(targetId === 'history') renderHistoryTable();
     });
 });
 
