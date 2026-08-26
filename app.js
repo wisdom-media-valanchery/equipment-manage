@@ -69,6 +69,15 @@ navLinks.forEach(link => {
         sections.forEach(s => s.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
+        // Close mobile sidebar if open
+        if (window.innerWidth < 768) {
+            const sidebar = document.querySelector('aside');
+            if (!sidebar.classList.contains('hidden')) {
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('absolute', 'z-40', 'h-full', 'w-64');
+            }
+        }
+
         // Trigger specific logic on tab load
         if(targetId === 'inventory') renderInventory();
         if(targetId === 'checkout') renderCheckoutOptions();
