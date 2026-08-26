@@ -810,5 +810,107 @@ document.getElementById('complete-program-btn').addEventListener('click', () => 
 });
 
 
+function renderHistoryTable(searchTerm = '') {
+    const tbody = document.getElementById('history-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    let completedPrograms = programs.filter(p => p.status === 'Completed');
+    
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        completedPrograms = completedPrograms.filter(p => 
+            (p.name && p.name.toLowerCase().includes(term)) || 
+            (p.date && p.date.includes(term)) || 
+            (p.person && p.person.toLowerCase().includes(term))
+        );
+    }
+    
+    completedPrograms.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if (completedPrograms.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No completed programs found.</td></tr>`;
+        return;
+    }
+    
+    completedPrograms.forEach(prog => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+        tr.innerHTML = `
+            <td class="px-4 py-3 text-sm whitespace-nowrap">${prog.date}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-900">${prog.name}</td>
+            <td class="px-4 py-3 text-sm">${prog.person}</td>
+            <td class="px-4 py-3 text-sm text-center">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-center">
+                <button onclick="viewHistoryDetails('${prog.id}')" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded border border-blue-200 shadow-sm transition">View Details</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+document.getElementById('search-history')?.addEventListener('input', (e) => {
+    renderHistoryTable(e.target.value);
+});
+
+window.viewHistoryDetails = function(progId) {
+    const prog = programs.find(p => p.id === progId);
+    const checkoutRecord = checkouts.find(c => c.programId === progId);
+    
+    if (!prog) return;
+    
+    document.getElementById('history-modal-title').textContent = `${prog.name} (${prog.date})`;
+    
+    let content = `
+        <div class="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border">
+            <div><span class="text-gray-500 text-sm">Location:</span> <br><span class="font-medium">${prog.location || 'N/A'}</span></div>
+            <div><span class="text-gray-500 text-sm">In Charge:</span> <br><span class="font-medium">${prog.person || 'N/A'}</span></div>
+            <div class="col-span-2"><span class="text-gray-500 text-sm">Description:</span> <br><span>${prog.desc || 'None'}</span></div>
+        </div>
+    `;
+    
+    if (checkoutRecord && checkoutRecord.items && checkoutRecord.items.length > 0) {
+        content += `
+            <h4 class="font-semibold text-gray-800 mb-3 border-b pb-2">Equipment Details</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse border border-gray-200">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700 text-sm">
+                            <th class="px-3 py-2 border-b">Item Name</th>
+                            <th class="px-3 py-2 border-b text-center">Qty Taken</th>
+                            <th class="px-3 py-2 border-b text-center">Qty Returned</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+        `;
+        
+        checkoutRecord.items.forEach(item => {
+            const eq = equipment.find(e => e.id === item.equipmentId);
+            const eqName = eq ? eq.name : 'Unknown Item';
+            content += `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-sm font-medium text-gray-900">${eqName}</td>
+                    <td class="px-3 py-2 text-sm text-center">${item.qtyTaken}</td>
+                    <td class="px-3 py-2 text-sm text-center text-green-600 font-semibold">${item.qtyReturned}</td>
+                </tr>
+            `;
+        });
+        
+        content += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        content += `<p class="text-gray-500 italic">No equipment was taken for this program.</p>`;
+    }
+    
+    document.getElementById('history-modal-content').innerHTML = content;
+    toggleModal('view-history-modal');
+}
+
 // Initialize app from Firebase
 initData();

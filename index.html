@@ -28,7 +28,10 @@
                     <i class="fas fa-sign-out-alt mr-2"></i> Checkout (Take)
                 </a>
                 <a href="#" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="checkin">
-                    <i class="fas fa-sign-in-alt mr-2"></i> Check-in (Return)
+                    <i class="fas fa-undo-alt mr-2"></i> Check In / Return
+                </a>
+                <a href="#" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="history">
+                    <i class="fas fa-history mr-2"></i> History
                 </a>
             </nav>
         </aside>
@@ -200,6 +203,34 @@
                     </div>
                 </section>
 
+                <!-- History Section -->
+                <section id="history" class="content-section hidden">
+                    <h2 class="text-3xl font-semibold mb-6">Old Programs (History)</h2>
+                    
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 class="font-medium text-gray-800">Completed Programs</h3>
+                            <input type="text" id="search-history" placeholder="Search by name or date..." class="border border-gray-300 rounded p-2 text-sm w-64 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wide">
+                                        <th class="px-4 py-3 border-b">Date</th>
+                                        <th class="px-4 py-3 border-b">Program Name</th>
+                                        <th class="px-4 py-3 border-b">In Charge</th>
+                                        <th class="px-4 py-3 border-b text-center">Status</th>
+                                        <th class="px-4 py-3 border-b text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body" class="divide-y divide-gray-200">
+                                    <!-- History rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -352,6 +383,24 @@
                         <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Update Status</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View History Modal -->
+    <div id="view-history-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-semibold text-gray-900" id="history-modal-title">Program Details</h3>
+                <button onclick="toggleModal('view-history-modal')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="history-modal-content" class="text-gray-700">
+                <!-- Details injected here -->
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="toggleModal('view-history-modal')" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">Close</button>
             </div>
         </div>
     </div>
