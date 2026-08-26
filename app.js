@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -14,7 +13,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 // --- State Management ---
 let equipment = [];
@@ -32,7 +30,6 @@ async function initData() {
             programs = data.programs || [];
             checkouts = data.checkouts || [];
         } else {
-            console.log("No existing data found, creating empty structure.");
             await setDoc(docRef, { equipment: [], programs: [], checkouts: [] });
         }
         
@@ -60,19 +57,35 @@ async function saveData() {
     }
 }
 
-// Generate unique ID
 function generateId() {
     return Math.random().toString(36).substr(2, 9);
 }
 
-// Helper: Convert File to Base64 String
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        if (!file) return resolve(null);
+// Compress Image to avoid Firestore 1MB limits
+function compressImage(file, maxWidth = 800) {
+    return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
         reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+        };
     });
 }
 
@@ -113,7 +126,6 @@ document.getElementById('mobile-menu-btn').addEventListener('click', () => {
     sidebar.classList.toggle('h-full');
 });
 
-// Expose functions to window for HTML inline event handlers
 window.toggleModal = function(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.toggle('hidden');
@@ -121,7 +133,6 @@ window.toggleModal = function(modalId) {
 
 window.toggleOwnershipFields = function() {
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
-
     if (ownership === 'Personal') {
         document.getElementById('personal-fields').classList.remove('hidden');
         document.getElementById('public-fields').classList.add('hidden');
@@ -168,7 +179,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving to Firebase...';
+    submitBtn.textContent = 'Preparing...';
 
     const eqId = generateId();
     const customId = document.getElementById('eq-custom-id').value;
@@ -177,16 +188,16 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     const qty = parseInt(document.getElementById('eq-qty').value);
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
     
-    let photoUrl = null;
-    let billUrl = null;
+    let hasPhoto = false;
+    let hasBill = false;
 
     try {
         const photoFile = document.getElementById('eq-photo').files[0];
         if (photoFile) {
-            submitBtn.textContent = 'Uploading Photo...';
-            const storageRef = ref(storage, `photos/${eqId}_${photoFile.name}`);
-            await uploadBytes(storageRef, photoFile);
-            photoUrl = await getDownloadURL(storageRef);
+            submitBtn.textContent = 'Saving Photo...';
+            const compressedPhoto = await compressImage(photoFile);
+            await setDoc(doc(db, "mediaWingImages", eqId + "_photo"), { data: compressedPhoto });
+            hasPhoto = true;
         }
 
         let price = '';
@@ -196,10 +207,10 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             price = document.getElementById('eq-price').value;
             const billFile = document.getElementById('eq-bill').files[0];
             if (billFile) {
-                submitBtn.textContent = 'Uploading Bill...';
-                const storageRef = ref(storage, `bills/${eqId}_${billFile.name}`);
-                await uploadBytes(storageRef, billFile);
-                billUrl = await getDownloadURL(storageRef);
+                submitBtn.textContent = 'Saving Bill...';
+                const compressedBill = await compressImage(billFile);
+                await setDoc(doc(db, "mediaWingImages", eqId + "_bill"), { data: compressedBill });
+                hasBill = true;
             }
         } else {
             ownerName = document.getElementById('eq-owner').value;
@@ -215,8 +226,8 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             ownership,
             ownerName,
             price,
-            photo: photoUrl,
-            bill: billUrl
+            hasPhoto,
+            hasBill
         };
 
         equipment.push(newItem);
@@ -230,7 +241,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
         showToast('Equipment added successfully!');
     } catch (error) {
         console.error("Error uploading", error);
-        alert("Failed to upload: " + error.message);
+        alert("Failed to save: " + error.message);
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Save Item';
@@ -281,11 +292,13 @@ function renderInventory(listToRender = equipment) {
     });
 }
 
-window.viewEquipment = function(id) {
+window.viewEquipment = async function(id) {
     const item = equipment.find(e => e.id === id);
     if(!item) return;
 
     document.getElementById('view-title').textContent = item.name;
+    document.getElementById('view-content').innerHTML = '<p class="text-center text-gray-500 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loading details...</p>';
+    toggleModal('view-item-modal');
     
     let content = `
         <div class="mb-4">
@@ -302,30 +315,49 @@ window.viewEquipment = function(id) {
         content += `<p><span class="text-gray-500 text-sm">Owner Name:</span> <span class="font-medium">${item.ownerName || 'Not specified'}</span></p>`;
     } else {
         content += `<p><span class="text-gray-500 text-sm">Price:</span> <span class="font-medium">₹${item.price || 'Not specified'}</span></p>`;
-        if(item.bill) {
-            content += `<div class="mt-2"><p class="text-sm text-gray-500 mb-1">Bill/Receipt:</p><a href="${item.bill}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-external-link-alt"></i> View Full Bill</a><br><img src="${item.bill}" alt="Bill" class="max-w-full h-auto max-h-48 border rounded shadow-sm mt-2"></div>`;
+        
+        if (item.hasBill) {
+            try {
+                const billDoc = await getDoc(doc(db, "mediaWingImages", id + "_bill"));
+                if (billDoc.exists()) {
+                    content += `<div class="mt-2"><p class="text-sm text-gray-500 mb-1">Bill/Receipt:</p><img src="${billDoc.data().data}" alt="Bill" class="max-w-full h-auto max-h-48 border rounded shadow-sm mt-2"></div>`;
+                }
+            } catch(e) {
+                console.error("Failed to load bill", e);
+            }
         }
     }
     content += `</div>`;
 
-    if (item.photo) {
-        content += `
-            <div class="mb-4 border-t pt-4">
-                <h4 class="font-semibold text-gray-700 mb-2">Product Photo</h4>
-                <a href="${item.photo}" target="_blank" class="text-blue-600 hover:underline text-sm"><i class="fas fa-external-link-alt"></i> View Full Photo</a><br>
-                <img src="${item.photo}" alt="Product Photo" class="max-w-full h-auto max-h-64 border rounded shadow-sm mt-2">
-            </div>
-        `;
+    if (item.hasPhoto) {
+        try {
+            const photoDoc = await getDoc(doc(db, "mediaWingImages", id + "_photo"));
+            if (photoDoc.exists()) {
+                content += `
+                    <div class="mb-4 border-t pt-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">Product Photo</h4>
+                        <img src="${photoDoc.data().data}" alt="Product Photo" class="max-w-full h-auto max-h-64 border rounded shadow-sm mt-2">
+                    </div>
+                `;
+            }
+        } catch(e) {
+             console.error("Failed to load photo", e);
+        }
     }
 
     document.getElementById('view-content').innerHTML = content;
-    toggleModal('view-item-modal');
 }
 
 window.deleteEquipment = async function(id) {
-    if(confirm('Are you sure you want to delete this equipment from Firebase?')) {
+    if(confirm('Are you sure you want to delete this equipment?')) {
+        const item = equipment.find(e => e.id === id);
         equipment = equipment.filter(e => e.id !== id);
         await saveData();
+        
+        // Clean up images silently
+        if(item.hasPhoto) deleteDoc(doc(db, "mediaWingImages", id + "_photo")).catch(e=>console.log(e));
+        if(item.hasBill) deleteDoc(doc(db, "mediaWingImages", id + "_bill")).catch(e=>console.log(e));
+
         renderInventory();
         showToast('Equipment deleted.');
     }
@@ -354,7 +386,7 @@ document.getElementById('create-program-form').addEventListener('submit', async 
     await saveData();
     toggleModal('create-program-modal');
     e.target.reset();
-    showToast('Program created in Firebase!');
+    showToast('Program created!');
     
     renderCheckoutOptions();
     renderCheckinOptions();
@@ -470,7 +502,7 @@ document.getElementById('confirm-checkout-btn').addEventListener('click', async 
     currentCheckoutCart = [];
     renderCart();
     renderCheckoutOptions(); 
-    showToast('Equipment checked out (Synced with Firebase)!');
+    showToast('Equipment checked out successfully!');
 });
 
 
@@ -597,7 +629,7 @@ document.getElementById('complete-program-btn').addEventListener('click', async 
     
     renderCheckinOptions();
     document.getElementById('checkin-items-section').classList.add('hidden');
-    showToast('Program marked as completed in Firebase.');
+    showToast('Program marked as completed.');
 });
 
 
