@@ -169,6 +169,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     submitBtn.textContent = 'Saving to Firebase...';
 
     const eqId = generateId();
+    const customId = document.getElementById('eq-custom-id').value;
     const name = document.getElementById('eq-name').value;
     const category = document.getElementById('eq-category').value;
     const qty = parseInt(document.getElementById('eq-qty').value);
@@ -204,6 +205,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
 
         const newItem = {
             id: eqId,
+            customId: customId,
             name,
             category,
             totalQty: qty,
@@ -232,22 +234,32 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     }
 });
 
-function renderInventory() {
+document.getElementById('search-inventory').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const filtered = equipment.filter(item => 
+        (item.customId && item.customId.toLowerCase().includes(term)) || 
+        (item.name && item.name.toLowerCase().includes(term))
+    );
+    renderInventory(filtered);
+});
+
+function renderInventory(listToRender = equipment) {
     const tbody = document.getElementById('inventory-table-body');
     tbody.innerHTML = '';
 
-    if (equipment.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No equipment found. Add some!</td></tr>';
+    if (listToRender.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No equipment found.</td></tr>';
         return;
     }
 
-    equipment.forEach(item => {
+    listToRender.forEach(item => {
         let ownershipBadge = item.ownership === 'Personal' 
             ? `<span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800"><i class="fas fa-user mr-1"></i>${item.ownerName || 'Personal'}</span>`
             : `<span class="px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800"><i class="fas fa-users mr-1"></i>Public</span>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${item.customId || '-'}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${item.name}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.category}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">${ownershipBadge}</td>
@@ -274,6 +286,7 @@ window.viewEquipment = function(id) {
     
     let content = `
         <div class="mb-4">
+            <span class="text-gray-500 text-sm">ID / Serial:</span> <span class="font-medium font-mono">${item.customId || '-'}</span><br>
             <span class="text-gray-500 text-sm">Category:</span> <span class="font-medium">${item.category}</span><br>
             <span class="text-gray-500 text-sm">Total Quantity:</span> <span class="font-medium">${item.totalQty}</span>
         </div>
