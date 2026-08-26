@@ -56,6 +56,7 @@ async function saveData() {
     } catch (err) {
         console.error("Error saving data to Firebase", err);
         showToast('Error saving data to server.', 'error');
+        throw err;
     }
 }
 
@@ -182,6 +183,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     try {
         const photoFile = document.getElementById('eq-photo').files[0];
         if (photoFile) {
+            submitBtn.textContent = 'Uploading Photo...';
             const b64 = await fileToBase64(photoFile);
             const storageRef = ref(storage, `photos/${eqId}_${photoFile.name}`);
             await uploadString(storageRef, b64, 'data_url');
@@ -195,6 +197,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             price = document.getElementById('eq-price').value;
             const billFile = document.getElementById('eq-bill').files[0];
             if (billFile) {
+                submitBtn.textContent = 'Uploading Bill...';
                 const b64 = await fileToBase64(billFile);
                 const storageRef = ref(storage, `bills/${eqId}_${billFile.name}`);
                 await uploadString(storageRef, b64, 'data_url');
@@ -219,6 +222,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
         };
 
         equipment.push(newItem);
+        submitBtn.textContent = 'Saving Database...';
         await saveData();
         
         renderInventory();
@@ -228,7 +232,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
         showToast('Equipment added successfully!');
     } catch (error) {
         console.error("Error uploading", error);
-        alert("Failed to upload. See console for details.");
+        alert("Failed to upload: " + error.message);
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Save Item';
