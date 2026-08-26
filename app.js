@@ -19,10 +19,60 @@ enableIndexedDbPersistence(db).catch((err) => {
     console.log("Persistence error:", err);
 });
 
-// --- State Management ---
 let equipment = [];
 let programs = [];
 let checkouts = [];
+let currentUserRole = sessionStorage.getItem('mediaWingRole') || null;
+
+function checkAuth() {
+    if (currentUserRole) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-dashboard').classList.remove('hidden');
+        document.getElementById('current-role-display').textContent = currentUserRole.toUpperCase();
+        
+        // Hide admin-only elements if user is staff
+        const adminElements = document.querySelectorAll('.admin-only');
+        if (currentUserRole === 'staff') {
+            adminElements.forEach(el => el.classList.add('hidden'));
+        } else {
+            adminElements.forEach(el => el.classList.remove('hidden'));
+        }
+        
+        initData(); // Fetch data and render
+    } else {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('app-dashboard').classList.add('hidden');
+    }
+}
+
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value.trim();
+    const err = document.getElementById('login-error');
+    
+    // Simple hardcoded auth (can be expanded to Firestore later)
+    if (u === 'admin' && p === 'admin123') {
+        currentUserRole = 'admin';
+        sessionStorage.setItem('mediaWingRole', 'admin');
+        err.classList.add('hidden');
+        checkAuth();
+    } else if (u === 'staff' && p === 'staff123') {
+        currentUserRole = 'staff';
+        sessionStorage.setItem('mediaWingRole', 'staff');
+        err.classList.add('hidden');
+        checkAuth();
+    } else {
+        err.classList.remove('hidden');
+    }
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+    currentUserRole = null;
+    sessionStorage.removeItem('mediaWingRole');
+    document.getElementById('login-form').reset();
+    checkAuth();
+});
 
 async function initData() {
     try {
@@ -340,9 +390,14 @@ function renderInventory(listToRender = equipment) {
                     <button onclick="viewEquipment('${item.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fas fa-eye"></i> View
                     </button>
+                    ${currentUserRole === 'admin' ? `
+                    <button onclick="openEditModal('${item.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
                     <button onclick="deleteEquipment('${item.id}')" class="bg-white border border-red-300 text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fas fa-trash"></i> Delete
                     </button>
+                    ` : ''}
                 </div>
             </td>
         `;
@@ -856,9 +911,11 @@ function renderHistoryTable(searchTerm = '') {
                     <button onclick="viewHistoryDetails('${prog.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fas fa-eye"></i> View Details
                     </button>
+                    ${currentUserRole === 'admin' ? `
                     <button onclick="deleteHistoryProgram('${prog.id}')" class="bg-white border border-red-300 text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fas fa-trash"></i>
                     </button>
+                    ` : ''}
                 </div>
             </td>
         `;
@@ -947,5 +1004,5 @@ window.viewHistoryDetails = function(progId) {
     toggleModal('view-history-modal');
 }
 
-// Initialize app from Firebase
-initData();
+// Check auth and initialize app
+checkAuth();
