@@ -40,7 +40,7 @@ async function initData() {
                 let currentlyOut = 0;
                 checkouts.forEach(c => {
                     const prog = programs.find(p => p.id === c.programId);
-                    if (prog && prog.status === 'Active') {
+                    if (prog) {
                         const itemInProg = c.items.find(i => i.equipmentId === eq.id);
                         if (itemInProg) {
                             currentlyOut += (itemInProg.qtyTaken - itemInProg.qtyReturned);
@@ -787,20 +787,9 @@ document.getElementById('complete-program-btn').addEventListener('click', () => 
     const pendingItems = checkoutRecord.items.filter(i => i.qtyReturned < i.qtyTaken);
 
     if (pendingItems.length > 0) {
-        if(!confirm('There are still items pending return! Closing this program will AUTOMATICALLY return all of them to the stock. Do you want to continue?')) {
+        if(!confirm('There are still items pending return! If you close this program, they will be permanently recorded as NOT returned. Do you want to continue?')) {
             return;
         }
-        
-        // Auto-return all pending items
-        pendingItems.forEach(itemRecord => {
-            const returnQty = itemRecord.qtyTaken - itemRecord.qtyReturned;
-            itemRecord.qtyReturned += returnQty;
-            
-            const eq = equipment.find(e => e.id === itemRecord.equipmentId);
-            if (eq) {
-                eq.availableQty += returnQty;
-            }
-        });
     } else {
         if(!confirm('All items returned! Mark this program as Completed?')) return;
     }
