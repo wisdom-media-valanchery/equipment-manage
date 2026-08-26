@@ -326,9 +326,15 @@ function renderInventory(listToRender = equipment) {
                     ${item.availableQty}
                 </span>
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-center space-x-2">
-                <button onclick="viewEquipment('${item.id}')" class="text-blue-600 hover:text-blue-900" title="View Details"><i class="fas fa-eye"></i></button>
-                <button onclick="deleteEquipment('${item.id}')" class="text-red-600 hover:text-red-900" title="Delete"><i class="fas fa-trash"></i></button>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex justify-center items-center gap-2">
+                    <button onclick="viewEquipment('${item.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button onclick="deleteEquipment('${item.id}')" class="bg-white border border-red-300 text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -692,11 +698,13 @@ function renderCheckinTable() {
                     ? '<span class="text-green-600"><i class="fas fa-check-circle"></i> OK</span>' 
                     : '<span class="text-red-500"><i class="fas fa-exclamation-triangle"></i> Pending</span>'}
             </td>
-            <td class="px-4 py-3 text-sm text-center">
-                <button onclick="openReturnModal('${eq.id}', '${eq.name}', ${item.qtyTaken}, ${item.qtyReturned})" 
-                        class="${item.qtyReturned > 0 ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} px-3 py-1 rounded text-xs font-medium transition-colors">
-                    ${item.qtyReturned > 0 ? '<i class="fas fa-edit"></i> Edit Return' : '<i class="fas fa-undo"></i> Return'}
-                </button>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex justify-center items-center gap-2">
+                    <button onclick="openReturnModal('${eq.id}', '${eq.name}', ${item.qtyTaken}, ${item.qtyReturned})" 
+                            class="bg-white border px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm ${item.qtyReturned > 0 ? 'border-yellow-400 text-yellow-700 hover:bg-yellow-50' : 'border-blue-300 text-blue-700 hover:bg-blue-50'}">
+                        ${item.qtyReturned > 0 ? '<i class="fas fa-edit"></i> Edit Return' : '<i class="fas fa-undo"></i> Return'}
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -845,9 +853,15 @@ function renderHistoryTable(searchTerm = '') {
             <td class="px-4 py-3 text-sm text-center">
                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
             </td>
-            <td class="px-4 py-3 text-sm text-center space-x-2">
-                <button onclick="viewHistoryDetails('${prog.id}')" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded border border-blue-200 shadow-sm transition">View Details</button>
-                <button onclick="deleteHistoryProgram('${prog.id}')" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded border border-red-200 shadow-sm transition"><i class="fas fa-trash"></i></button>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex justify-center items-center gap-2">
+                    <button onclick="viewHistoryDetails('${prog.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
+                        <i class="fas fa-eye"></i> View Details
+                    </button>
+                    <button onclick="deleteHistoryProgram('${prog.id}')" class="bg-white border border-red-300 text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
