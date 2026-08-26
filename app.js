@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -13,6 +13,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Enable offline caching for instant loads
+enableIndexedDbPersistence(db).catch((err) => {
+    console.log("Persistence error:", err);
+});
 
 // --- State Management ---
 let equipment = [];
@@ -30,7 +35,7 @@ async function initData() {
             programs = data.programs || [];
             checkouts = data.checkouts || [];
         } else {
-            await setDoc(docRef, { equipment: [], programs: [], checkouts: [] });
+            setDoc(docRef, { equipment: [], programs: [], checkouts: [] });
         }
         
         updateDashboard();
@@ -49,10 +54,11 @@ async function saveData() {
             programs,
             checkouts
         });
-        updateDashboard();
+        // We do NOT call updateDashboard here anymore, 
+        // we call it instantly before saveData.
     } catch (err) {
         console.error("Error saving data to Firebase", err);
-        showToast('Error saving data to server.', 'error');
+        showToast('Error syncing with server.', 'error');
         throw err;
     }
 }
@@ -179,7 +185,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Preparing...';
+    submitBtn.textContent = 'Processing...';
 
     const eqId = generateId();
     const customId = document.getElementById('eq-custom-id').value;
@@ -191,12 +197,14 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     let hasPhoto = false;
     let hasBill = false;
 
+    // We still await image compression because we need it for the document,
+    // but canvas compression is very fast.
     try {
         const photoFile = document.getElementById('eq-photo').files[0];
         if (photoFile) {
-            submitBtn.textContent = 'Saving Photo...';
+            submitBtn.textContent = 'Compressing Photo...';
             const compressedPhoto = await compressImage(photoFile);
-            await setDoc(doc(db, "mediaWingImages", eqId + "_photo"), { data: compressedPhoto });
+            setDoc(doc(db, "mediaWingImages", eqId + "_photo"), { data: compressedPhoto }).catch(console.error);
             hasPhoto = true;
         }
 
@@ -207,9 +215,9 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             price = document.getElementById('eq-price').value;
             const billFile = document.getElementById('eq-bill').files[0];
             if (billFile) {
-                submitBtn.textContent = 'Saving Bill...';
+                submitBtn.textContent = 'Compressing Bill...';
                 const compressedBill = await compressImage(billFile);
-                await setDoc(doc(db, "mediaWingImages", eqId + "_bill"), { data: compressedBill });
+                setDoc(doc(db, "mediaWingImages", eqId + "_bill"), { data: compressedBill }).catch(console.error);
                 hasBill = true;
             }
         } else {
@@ -231,14 +239,18 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
         };
 
         equipment.push(newItem);
-        submitBtn.textContent = 'Saving Database...';
-        await saveData();
         
+        // Optimistic UI Update (Instant!)
+        updateDashboard();
         renderInventory();
         toggleModal('add-item-modal');
         e.target.reset();
         toggleOwnershipFields();
-        showToast('Equipment added successfully!');
+        showToast('Equipment added instantly!');
+
+        // Save in background
+        saveData().catch(console.error);
+
     } catch (error) {
         console.error("Error uploading", error);
         alert("Failed to save: " + error.message);
@@ -348,23 +360,27 @@ window.viewEquipment = async function(id) {
     document.getElementById('view-content').innerHTML = content;
 }
 
-window.deleteEquipment = async function(id) {
+window.deleteEquipment = function(id) {
     if(confirm('Are you sure you want to delete this equipment?')) {
         const item = equipment.find(e => e.id === id);
         equipment = equipment.filter(e => e.id !== id);
-        await saveData();
+        
+        // Optimistic update
+        updateDashboard();
+        renderInventory();
+        showToast('Equipment deleted.');
+
+        // Save in background
+        saveData().catch(e => console.error(e));
         
         // Clean up images silently
         if(item.hasPhoto) deleteDoc(doc(db, "mediaWingImages", id + "_photo")).catch(e=>console.log(e));
         if(item.hasBill) deleteDoc(doc(db, "mediaWingImages", id + "_bill")).catch(e=>console.log(e));
-
-        renderInventory();
-        showToast('Equipment deleted.');
     }
 }
 
 // --- Program Creation Logic ---
-document.getElementById('create-program-form').addEventListener('submit', async (e) => {
+document.getElementById('create-program-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('prog-name').value;
     const date = document.getElementById('prog-date').value;
@@ -383,13 +399,17 @@ document.getElementById('create-program-form').addEventListener('submit', async 
         items: []
     });
 
-    await saveData();
+    // Optimistic Update
+    updateDashboard();
     toggleModal('create-program-modal');
     e.target.reset();
     showToast('Program created!');
     
     renderCheckoutOptions();
     renderCheckinOptions();
+
+    // Background Save
+    saveData().catch(e => console.error(e));
 });
 
 
@@ -477,7 +497,7 @@ window.removeFromCart = function(index) {
     renderCart();
 }
 
-document.getElementById('confirm-checkout-btn').addEventListener('click', async () => {
+document.getElementById('confirm-checkout-btn').addEventListener('click', () => {
     if (!selectedCheckoutProgramId || currentCheckoutCart.length === 0) return;
 
     const checkoutRecord = checkouts.find(c => c.programId === selectedCheckoutProgramId);
@@ -498,11 +518,15 @@ document.getElementById('confirm-checkout-btn').addEventListener('click', async 
         }
     });
 
-    await saveData();
+    // Optimistic Update
+    updateDashboard();
     currentCheckoutCart = [];
     renderCart();
     renderCheckoutOptions(); 
     showToast('Equipment checked out successfully!');
+
+    // Background save
+    saveData().catch(e => console.error(e));
 });
 
 
@@ -585,7 +609,7 @@ window.openReturnModal = function(eqId, eqName, taken, returned) {
     toggleModal('return-item-modal');
 }
 
-document.getElementById('return-item-form').addEventListener('submit', async (e) => {
+document.getElementById('return-item-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const progId = document.getElementById('return-prog-id').value;
     const eqId = document.getElementById('return-eq-id').value;
@@ -603,13 +627,17 @@ document.getElementById('return-item-form').addEventListener('submit', async (e)
     const eq = equipment.find(e => e.id === eqId);
     eq.availableQty += returnQty;
 
-    await saveData();
+    // Optimistic Update
+    updateDashboard();
     toggleModal('return-item-modal');
     renderCheckinTable();
     showToast(`${returnQty}x ${eq.name} returned!`);
+
+    // Background Save
+    saveData().catch(err => console.error(err));
 });
 
-document.getElementById('complete-program-btn').addEventListener('click', async () => {
+document.getElementById('complete-program-btn').addEventListener('click', () => {
     if(!selectedCheckinProgramId) return;
     
     const checkoutRecord = checkouts.find(c => c.programId === selectedCheckinProgramId);
@@ -625,11 +653,15 @@ document.getElementById('complete-program-btn').addEventListener('click', async 
 
     const prog = programs.find(p => p.id === selectedCheckinProgramId);
     prog.status = 'Completed';
-    await saveData();
     
+    // Optimistic Update
+    updateDashboard();
     renderCheckinOptions();
     document.getElementById('checkin-items-section').classList.add('hidden');
     showToast('Program marked as completed.');
+
+    // Background Save
+    saveData().catch(err => console.error(err));
 });
 
 
