@@ -135,8 +135,17 @@ navLinks.forEach(link => {
         }
 
         if(targetId === 'inventory') renderInventory();
-        if(targetId === 'checkout') renderCheckoutOptions();
-        if(targetId === 'checkin') renderCheckinOptions();
+        if(targetId === 'checkout') {
+            selectedCheckoutProgramId = null;
+            currentCheckoutCart = [];
+            document.getElementById('checkout-items-section')?.classList.add('hidden');
+            renderCheckoutOptions();
+        }
+        if(targetId === 'checkin') {
+            selectedCheckinProgramId = null;
+            document.getElementById('checkin-items-section')?.classList.add('hidden');
+            renderCheckinOptions();
+        }
         if(targetId === 'history') renderHistoryTable();
     });
 });
