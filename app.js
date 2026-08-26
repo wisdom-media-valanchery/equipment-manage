@@ -479,11 +479,73 @@ document.getElementById('checkout-program-select').addEventListener('change', (e
     if (selectedCheckoutProgramId) {
         section.classList.remove('hidden');
         currentCheckoutCart = [];
+        renderAlreadyCheckedOut();
         renderCart();
     } else {
         section.classList.add('hidden');
     }
 });
+
+function renderAlreadyCheckedOut() {
+    const listEl = document.getElementById('already-checked-out-list');
+    const container = document.getElementById('already-checked-out-section');
+    
+    if (!selectedCheckoutProgramId) return;
+    
+    const checkoutRecord = checkouts.find(c => c.programId === selectedCheckoutProgramId);
+    
+    if (!checkoutRecord || checkoutRecord.items.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+    
+    container.classList.remove('hidden');
+    listEl.innerHTML = '';
+    
+    checkoutRecord.items.forEach(item => {
+        const eq = equipment.find(e => e.id === item.equipmentId);
+        if(!eq) return;
+        
+        listEl.innerHTML += `
+            <li class="p-3 flex justify-between items-center text-sm">
+                <span><span class="font-semibold text-gray-800">${eq.name}</span> <span class="text-gray-500 ml-2">Total Taken: ${item.qtyTaken}</span></span>
+                <button onclick="removeAlreadyCheckedOut('${eq.id}')" class="text-red-600 hover:text-red-800 text-xs px-3 py-1 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50">
+                    <i class="fas fa-trash mr-1"></i> Remove
+                </button>
+            </li>
+        `;
+    });
+}
+
+window.removeAlreadyCheckedOut = function(eqId) {
+    if(!confirm("Are you sure you want to completely remove this item from the program? This will return it to stock.")) return;
+    
+    const checkoutRecord = checkouts.find(c => c.programId === selectedCheckoutProgramId);
+    const itemIndex = checkoutRecord.items.findIndex(i => i.equipmentId === eqId);
+    
+    if (itemIndex > -1) {
+        const itemRecord = checkoutRecord.items[itemIndex];
+        const pendingQty = itemRecord.qtyTaken - itemRecord.qtyReturned;
+        
+        const eq = equipment.find(e => e.id === eqId);
+        if (eq && pendingQty > 0) {
+            eq.availableQty += pendingQty;
+        }
+        
+        checkoutRecord.items.splice(itemIndex, 1);
+        
+        updateDashboard();
+        renderAlreadyCheckedOut();
+        
+        // Re-render equipment dropdown but keep program selected
+        const currProg = selectedCheckoutProgramId;
+        renderCheckoutOptions();
+        document.getElementById('checkout-program-select').value = currProg;
+        
+        showToast('Item removed from program and stock updated.');
+        saveData().catch(err => console.error(err));
+    }
+}
 
 document.getElementById('add-to-checkout-btn').addEventListener('click', () => {
     const eqId = document.getElementById('checkout-equipment-select').value;
@@ -560,9 +622,16 @@ document.getElementById('confirm-checkout-btn').addEventListener('click', () => 
 
     // Optimistic Update
     updateDashboard();
+    const currProg = selectedCheckoutProgramId;
     currentCheckoutCart = [];
     renderCart();
     renderCheckoutOptions(); 
+    
+    // Maintain program selection and update lists
+    document.getElementById('checkout-program-select').value = currProg;
+    selectedCheckoutProgramId = currProg;
+    renderAlreadyCheckedOut();
+
     showToast('Equipment checked out successfully!');
 
     // Background save
