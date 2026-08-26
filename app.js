@@ -178,6 +178,7 @@ function showToast(message, type = 'success') {
 
 function updateDashboard() {
     const totalItems = equipment.reduce((sum, item) => sum + parseInt(item.totalQty), 0);
+    const availableItems = equipment.reduce((sum, item) => sum + parseInt(item.availableQty), 0);
     const activeProgs = programs.filter(p => p.status === 'Active').length;
     
     let itemsOut = 0;
@@ -191,6 +192,7 @@ function updateDashboard() {
     });
 
     document.getElementById('stat-total-items').textContent = totalItems;
+    document.getElementById('stat-available-items').textContent = availableItems;
     document.getElementById('stat-active-programs').textContent = activeProgs;
     document.getElementById('stat-items-out').textContent = itemsOut;
 }
