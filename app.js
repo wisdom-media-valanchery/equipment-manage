@@ -22,6 +22,7 @@ enableIndexedDbPersistence(db).catch((err) => {
 let equipment = [];
 let programs = [];
 let checkouts = [];
+let fundAdditions = [];
 let currentUserRole = sessionStorage.getItem('mediaWingRole') || null;
 
 function checkAuth() {
@@ -84,6 +85,7 @@ async function initData() {
             equipment = data.equipment || [];
             programs = data.programs || [];
             checkouts = data.checkouts || [];
+            fundAdditions = data.fundAdditions || [];
             
             // Self-healing: Recalculate availableQty to fix any lost items
             equipment.forEach(eq => {
@@ -100,15 +102,16 @@ async function initData() {
                 eq.availableQty = eq.totalQty - currentlyOut;
             });
             
+            updateDashboard();
+            renderInventory();
+            renderHistoryTable();
+            renderFundsTab(); // Initial render for funds
         } else {
-            setDoc(docRef, { equipment: [], programs: [], checkouts: [] });
+            setDoc(docRef, { equipment: [], programs: [], checkouts: [], fundAdditions: [] });
         }
-        
-        updateDashboard();
-        renderInventory();
     } catch (err) {
         console.error("Error loading data from Firebase", err);
-        showToast('Error loading data from server.', 'error');
+        showToast('Error loading data. Check console.', 'error');
     }
 }
 
@@ -118,7 +121,8 @@ async function saveData() {
         await setDoc(docRef, {
             equipment,
             programs,
-            checkouts
+            checkouts,
+            fundAdditions
         });
         // We do NOT call updateDashboard here anymore, 
         // we call it instantly before saveData.
@@ -255,6 +259,9 @@ function updateDashboard() {
     document.getElementById('stat-available-items').textContent = availableItems;
     document.getElementById('stat-active-programs').textContent = activeProgs;
     document.getElementById('stat-items-out').textContent = itemsOut;
+    
+    // Also sync the Funds tab in case prices or public items changed
+    if (typeof renderFundsTab === 'function') renderFundsTab();
 }
 
 // --- Inventory Logic ---
@@ -316,6 +323,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             ownerName,
             price,
             photoCount,
+            addedOn: new Date().toISOString(),
             hasBill
         };
 
@@ -1287,3 +1295,124 @@ window.viewHistoryDetails = function(progId) {
 
 // Check auth and initialize app
 checkAuth();
+
+// --- Fund Management Logic ---
+
+function renderFundsTab() {
+    if (currentUserRole !== 'admin') return; // Extra safety
+
+    let totalCollected = 0;
+    const additionsBody = document.getElementById('fund-additions-body');
+    additionsBody.innerHTML = '';
+
+    // Sort by date descending
+    const sortedAdditions = [...fundAdditions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    sortedAdditions.forEach(f => {
+        totalCollected += parseFloat(f.amount);
+        additionsBody.innerHTML += \
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm text-gray-700">\</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">\</td>
+                <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">?\</td>
+                <td class="px-4 py-3 text-sm text-center">
+                    <button onclick="deleteFundAddition('\')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            </tr>
+        \;
+    });
+
+    if (sortedAdditions.length === 0) {
+        additionsBody.innerHTML = '<tr><td colspan="4" class="px-4 py-3 text-sm text-center text-gray-500">No funds added yet.</td></tr>';
+    }
+
+    let totalSpent = 0;
+    const usageBody = document.getElementById('fund-usage-body');
+    usageBody.innerHTML = '';
+
+    const publicEq = equipment.filter(e => e.ownership === 'Public');
+    // Sort by date added descending
+    publicEq.sort((a, b) => new Date(b.addedOn || 0) - new Date(a.addedOn || 0));
+
+    publicEq.forEach(eq => {
+        const price = parseFloat(eq.price || 0);
+        totalSpent += price;
+        usageBody.innerHTML += \
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm text-gray-700">\</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">\ (\)</td>
+                <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">?\</td>
+            </tr>
+        \;
+    });
+
+    if (publicEq.length === 0) {
+        usageBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-sm text-center text-gray-500">No public equipment bought yet.</td></tr>';
+    }
+
+    const available = totalCollected - totalSpent;
+
+    document.getElementById('fund-total-collected').textContent = '?' + totalCollected.toLocaleString();
+    document.getElementById('fund-total-spent').textContent = '?' + totalSpent.toLocaleString();
+    
+    const balanceEl = document.getElementById('fund-available-balance');
+    balanceEl.textContent = '?' + available.toLocaleString();
+    if (available < 0) {
+        balanceEl.classList.remove('text-blue-600');
+        balanceEl.classList.add('text-red-600');
+    } else {
+        balanceEl.classList.add('text-blue-600');
+        balanceEl.classList.remove('text-red-600');
+    }
+}
+
+document.getElementById('add-fund-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (currentUserRole !== 'admin') return;
+
+    const amount = parseFloat(document.getElementById('fund-amount').value);
+    const source = document.getElementById('fund-source').value.trim();
+
+    if (!amount || amount <= 0) return alert("Enter a valid amount.");
+
+    const newFund = {
+        id: 'fund_' + Date.now(),
+        amount: amount,
+        source: source,
+        date: new Date().toISOString()
+    };
+
+    const saveBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnHtml = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+
+    try {
+        fundAdditions.push(newFund);
+        renderFundsTab(); // Update UI instantly
+        toggleModal('add-fund-modal');
+        document.getElementById('add-fund-form').reset();
+        
+        showToast('Fund added successfully!');
+        await saveData();
+    } catch (err) {
+        console.error(err);
+        alert("Failed to save fund: " + err.message);
+    } finally {
+        saveBtn.innerHTML = originalBtnHtml;
+        saveBtn.disabled = false;
+    }
+});
+
+window.deleteFundAddition = async function(id) {
+    if (!confirm("Are you sure you want to delete this fund entry? This will reduce the available balance.")) return;
+    
+    fundAdditions = fundAdditions.filter(f => f.id !== id);
+    renderFundsTab(); // Update UI instantly
+    
+    showToast('Fund entry deleted.');
+    await saveData().catch(e => console.error(e));
+};
+
+// Also we need to ensure renderFundsTab is called when a public equipment is added, edited, or deleted.
+// updateDashboard() is called after all these actions. We can just add enderFundsTab() to updateDashboard().
