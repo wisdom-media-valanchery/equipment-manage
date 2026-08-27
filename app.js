@@ -430,7 +430,7 @@ window.openEditModal = async function(id) {
     // Set Ownership
     if (item.ownership === 'Personal') {
         document.getElementById('edit-own-personal').checked = true;
-        document.getElementById('edit-item-owner').value = item.owner || '';
+        document.getElementById('edit-item-owner').value = item.ownerName || item.owner || '';
     } else {
         document.getElementById('edit-own-public').checked = true;
         document.getElementById('edit-item-price').value = item.price || '';
@@ -546,11 +546,11 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
         item.ownership = ownership;
         
         if (ownership === 'Personal') {
-            item.owner = document.getElementById('edit-item-owner').value.trim();
+            item.ownerName = document.getElementById('edit-item-owner').value.trim();
             item.price = 0;
         } else {
             item.price = parseFloat(document.getElementById('edit-item-price').value) || 0;
-            item.owner = '';
+            item.ownerName = '';
         }
         
         const newTotal = parseInt(document.getElementById('edit-item-qty').value);
