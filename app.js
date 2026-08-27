@@ -257,6 +257,12 @@ navLinks.forEach(link => {
         sections.forEach(s => s.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
+        if (window.innerWidth < 768) {
+            const sidebar = document.querySelector('aside');
+            if (!sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        }
 
         if(targetId === 'inventory') renderInventory();
         if(targetId === 'checkout') {
@@ -277,19 +283,15 @@ navLinks.forEach(link => {
 document.getElementById('mobile-menu-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     const sidebar = document.querySelector('aside');
-    sidebar.classList.toggle('hidden');
-    sidebar.classList.toggle('absolute');
-    sidebar.classList.toggle('z-40');
-    sidebar.classList.toggle('h-full');
+    sidebar.classList.toggle('-translate-x-full');
 });
 
 document.addEventListener('click', (e) => {
     if (window.innerWidth < 768) {
         const sidebar = document.querySelector('aside');
         const mobileBtn = document.getElementById('mobile-menu-btn');
-        if (!sidebar.classList.contains('hidden') && !sidebar.contains(e.target) && !mobileBtn.contains(e.target)) {
-            sidebar.classList.add('hidden');
-            sidebar.classList.remove('absolute', 'z-40', 'h-full');
+        if (!sidebar.classList.contains('-translate-x-full') && !sidebar.contains(e.target) && !mobileBtn.contains(e.target)) {
+            sidebar.classList.add('-translate-x-full');
         }
     }
 });
