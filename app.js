@@ -405,6 +405,21 @@ function renderInventory(listToRender = equipment) {
     });
 }
 
+window.toggleEditOwnershipFields = function() {
+    const val = document.getElementById('edit-item-ownership').value;
+    const rentalContainer = document.getElementById('edit-rental-fee-container');
+    const publicContainer = document.getElementById('edit-public-price-container');
+    
+    rentalContainer.classList.add('hidden');
+    publicContainer.classList.add('hidden');
+    
+    if (val === 'rental') {
+        rentalContainer.classList.remove('hidden');
+    } else if (val === 'public') {
+        publicContainer.classList.remove('hidden');
+    }
+};
+
 window.openEditModal = function(id) {
     if (currentUserRole !== 'admin') return;
     const item = equipment.find(e => e.id === id);
@@ -415,11 +430,20 @@ window.openEditModal = function(id) {
     document.getElementById('edit-item-custom-id').value = item.customId || '';
     document.getElementById('edit-item-desc').value = item.desc || '';
     document.getElementById('edit-item-qty').value = item.totalQty;
+    
+    document.getElementById('edit-item-ownership').value = item.ownership || 'wisdom';
+    document.getElementById('edit-item-rental-fee').value = item.rentalFee || '';
+    document.getElementById('edit-item-public-price').value = item.publicPrice || '';
+    toggleEditOwnershipFields();
+    
+    // Clear file inputs
+    document.getElementById('edit-item-photos').value = '';
+    document.getElementById('edit-item-bill').value = '';
 
     toggleModal('edit-item-modal');
 };
 
-document.getElementById('edit-item-form')?.addEventListener('submit', (e) => {
+document.getElementById('edit-item-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (currentUserRole !== 'admin') return;
 
@@ -427,22 +451,71 @@ document.getElementById('edit-item-form')?.addEventListener('submit', (e) => {
     const item = equipment.find(e => e.id === id);
     if (!item) return;
 
-    item.name = document.getElementById('edit-item-name').value.trim();
-    item.customId = document.getElementById('edit-item-custom-id').value.trim();
-    item.desc = document.getElementById('edit-item-desc').value.trim();
-    
-    const newTotal = parseInt(document.getElementById('edit-item-qty').value);
-    const diff = newTotal - item.totalQty;
-    item.totalQty = newTotal;
-    item.availableQty += diff;
-    if (item.availableQty < 0) item.availableQty = 0;
+    const saveBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnHtml = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
 
-    toggleModal('edit-item-modal');
-    updateDashboard();
-    renderInventory();
-    
-    showToast('Equipment updated successfully.');
-    saveData().catch(err => console.error(err));
+    try {
+        item.name = document.getElementById('edit-item-name').value.trim();
+        item.customId = document.getElementById('edit-item-custom-id').value.trim();
+        item.desc = document.getElementById('edit-item-desc').value.trim();
+        
+        item.ownership = document.getElementById('edit-item-ownership').value;
+        item.rentalFee = item.ownership === 'rental' ? parseFloat(document.getElementById('edit-item-rental-fee').value) || 0 : 0;
+        item.publicPrice = item.ownership === 'public' ? parseFloat(document.getElementById('edit-item-public-price').value) || 0 : 0;
+        
+        const newTotal = parseInt(document.getElementById('edit-item-qty').value);
+        const diff = newTotal - item.totalQty;
+        item.totalQty = newTotal;
+        item.availableQty += diff;
+        if (item.availableQty < 0) item.availableQty = 0;
+
+        // Handle photos
+        const photoInput = document.getElementById('edit-item-photos');
+        if (photoInput.files.length > 0) {
+            const maxPhotos = Math.min(photoInput.files.length, 4);
+            const photoBase64Array = [];
+            for(let i=0; i<maxPhotos; i++) {
+                const b64 = await resizeImage(photoInput.files[i], 800, 800);
+                photoBase64Array.push(b64);
+            }
+            // Save to Firestore Images
+            for(let i=0; i<4; i++) {
+                const photoDocId = `${id}_photo_${i}`;
+                const photoRef = doc(db, "mediaWingImages", photoDocId);
+                if(i < photoBase64Array.length) {
+                    await setDoc(photoRef, { data: photoBase64Array[i] });
+                } else {
+                    await setDoc(photoRef, { data: null });
+                }
+            }
+            item.photoCount = photoBase64Array.length;
+        }
+
+        // Handle bill
+        const billInput = document.getElementById('edit-item-bill');
+        if (billInput.files.length > 0) {
+            const billBase64 = await resizeImage(billInput.files[0], 800, 800);
+            const billDocId = `${id}_bill`;
+            const billRef = doc(db, "mediaWingImages", billDocId);
+            await setDoc(billRef, { data: billBase64 });
+            item.hasBill = true;
+        }
+
+        toggleModal('edit-item-modal');
+        updateDashboard();
+        renderInventory();
+        
+        showToast('Equipment updated successfully.');
+        await saveData();
+    } catch (err) {
+        console.error("Error updating equipment:", err);
+        alert("Error saving: " + err.message);
+    } finally {
+        saveBtn.innerHTML = originalBtnHtml;
+        saveBtn.disabled = false;
+    }
 });
 
 window.viewEquipment = async function(id) {
@@ -905,6 +978,30 @@ document.getElementById('complete-program-btn').addEventListener('click', () => 
         confirmCompleteWithMissing();
     }
 });
+
+window.returnAndCompleteProgram = async function() {
+    if(!selectedCheckinProgramId) return;
+    const checkoutRecord = checkouts.find(c => c.programId === selectedCheckinProgramId);
+    if (!checkoutRecord) return;
+    
+    // Auto-return all pending
+    checkoutRecord.items.forEach(itemRecord => {
+        if (itemRecord.qtyReturned < itemRecord.qtyTaken) {
+            itemRecord.qtyReturned = itemRecord.qtyTaken;
+        }
+    });
+    
+    const prog = programs.find(p => p.id === selectedCheckinProgramId);
+    if (prog) prog.status = 'Completed';
+    
+    updateDashboard();
+    renderCheckinOptions();
+    document.getElementById('checkin-items-section').classList.add('hidden');
+    
+    toggleModal('missing-items-modal');
+    showToast('All items returned and program completed.');
+    await saveData().catch(err => console.error(err));
+};
 
 window.confirmCompleteWithMissing = function() {
     if(!selectedCheckinProgramId) return;
