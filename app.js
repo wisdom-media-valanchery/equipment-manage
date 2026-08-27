@@ -468,7 +468,13 @@ window.openEditModal = async function(id) {
         for (let i = 0; i < item.photoCount; i++) {
             const photoDoc = await getDoc(doc(db, "mediaWingImages", `${id}_photo_${i}`));
             if (photoDoc.exists() && photoDoc.data().data) {
-                imgsHtml += `<img src="${photoDoc.data().data}" class="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src)">`;
+                imgsHtml += `
+                <div class="relative inline-block">
+                    <img src="${photoDoc.data().data}" class="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src)">
+                    <button type="button" onclick="deleteExistingPhoto('${id}', ${i})" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-700 z-10" title="Delete Photo">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>`;
             }
         }
         photosContainer.innerHTML = imgsHtml || '<div class="text-gray-500 text-sm">No existing photos.</div>';
@@ -482,12 +488,45 @@ window.openEditModal = async function(id) {
         billContainer.innerHTML = '<div class="text-gray-500 text-sm">Loading...</div>';
         const billDoc = await getDoc(doc(db, "mediaWingImages", `${id}_bill`));
         if (billDoc.exists() && billDoc.data().data) {
-            billContainer.innerHTML = `<img src="${billDoc.data().data}" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src)">`;
+            billContainer.innerHTML = `
+            <div class="relative inline-block">
+                <img src="${billDoc.data().data}" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src)">
+                <button type="button" onclick="deleteExistingBill('${id}')" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-700 z-10" title="Delete Bill">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>`;
         } else {
             billContainer.innerHTML = '<div class="text-gray-500 text-sm">No bill attached.</div>';
         }
     } else {
         billContainer.innerHTML = '<div class="text-gray-500 text-sm">No bill attached.</div>';
+    }
+};
+
+window.deleteExistingPhoto = async function(id, index) {
+    if (!confirm("Are you sure you want to delete this photo permanently?")) return;
+    try {
+        await setDoc(doc(db, "mediaWingImages", `${id}_photo_${index}`), { data: null });
+        showToast("Photo deleted.");
+        openEditModal(id); // reload modal content
+    } catch (e) {
+        alert("Failed to delete photo: " + e.message);
+    }
+};
+
+window.deleteExistingBill = async function(id) {
+    if (!confirm("Are you sure you want to delete this bill permanently?")) return;
+    try {
+        await setDoc(doc(db, "mediaWingImages", `${id}_bill`), { data: null });
+        const item = equipment.find(e => e.id === id);
+        if (item) {
+            item.hasBill = false;
+            await saveData();
+        }
+        showToast("Bill deleted.");
+        openEditModal(id); // reload modal content
+    } catch (e) {
+        alert("Failed to delete bill: " + e.message);
     }
 };
 
