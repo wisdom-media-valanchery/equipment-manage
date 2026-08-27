@@ -82,7 +82,7 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
         sessionStorage.setItem('mediaWingRole', 'admin');
         err.classList.add('hidden');
         checkAuth();
-    } else if (u === 'staff' && p === 'staff123') {
+    } else if (u === 'member' && p === 'member1122') {
         currentUserRole = 'staff';
         sessionStorage.setItem('mediaWingRole', 'staff');
         err.classList.add('hidden');
