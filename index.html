@@ -273,9 +273,14 @@
                 <section id="funds" class="content-section hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-3xl font-semibold">Fund Management</h2>
-                        <button onclick="toggleModal('add-fund-modal')" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
-                            <i class="fas fa-plus mr-2"></i> Add Fund
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="toggleModal('add-expense-modal')" class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 transition">
+                                <i class="fas fa-minus mr-2"></i> Add Expense
+                            </button>
+                            <button onclick="toggleModal('add-fund-modal')" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
+                                <i class="fas fa-plus mr-2"></i> Add Fund
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Summary Cards -->
@@ -327,8 +332,9 @@
                                     <thead class="sticky top-0 bg-gray-100 z-10">
                                         <tr class="text-gray-600 text-xs uppercase tracking-wide">
                                             <th class="px-4 py-3 border-b">Date Added</th>
-                                            <th class="px-4 py-3 border-b">Equipment Name</th>
-                                            <th class="px-4 py-3 border-b text-right">Price (₹)</th>
+                                            <th class="px-4 py-3 border-b">Expense / Equipment Name</th>
+                                            <th class="px-4 py-3 border-b text-right">Amount (₹)</th>
+                                            <th class="px-4 py-3 border-b text-center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="fund-usage-body" class="divide-y divide-gray-200">
@@ -365,6 +371,80 @@
                 <div class="flex justify-end gap-2 mt-6 border-t pt-4">
                     <button type="button" onclick="toggleModal('add-fund-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Add Fund</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div id="add-expense-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 overflow-y-auto p-4 sm:p-6">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto mt-2 sm:mt-10 mb-10 h-fit">
+            <div class="flex justify-between items-center p-4 border-b bg-white rounded-t-lg">
+                <h3 class="text-lg font-semibold text-red-600">Add Expense</h3>
+                <button onclick="toggleModal('add-expense-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="add-expense-form" class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
+                    <input type="number" id="expense-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500" placeholder="e.g. 500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Expense Description *</label>
+                    <input type="text" id="expense-source" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500" placeholder="e.g. TA for John">
+                </div>
+                <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+                    <button type="button" onclick="toggleModal('add-expense-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Add Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Fund Modal -->
+    <div id="edit-fund-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 overflow-y-auto p-4 sm:p-6">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto mt-2 sm:mt-10 mb-10 h-fit">
+            <div class="flex justify-between items-center p-4 border-b bg-white rounded-t-lg">
+                <h3 class="text-lg font-semibold">Edit Fund Entry</h3>
+                <button onclick="toggleModal('edit-fund-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="edit-fund-form" class="p-6">
+                <input type="hidden" id="edit-fund-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
+                    <input type="number" id="edit-fund-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Source / Description *</label>
+                    <input type="text" id="edit-fund-source" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+                    <button type="button" onclick="toggleModal('edit-fund-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Update Fund</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Expense Modal -->
+    <div id="edit-expense-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 overflow-y-auto p-4 sm:p-6">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto mt-2 sm:mt-10 mb-10 h-fit">
+            <div class="flex justify-between items-center p-4 border-b bg-white rounded-t-lg">
+                <h3 class="text-lg font-semibold text-red-600">Edit Expense Entry</h3>
+                <button onclick="toggleModal('edit-expense-modal')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="edit-expense-form" class="p-6">
+                <input type="hidden" id="edit-expense-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
+                    <input type="number" id="edit-expense-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Expense Description *</label>
+                    <input type="text" id="edit-expense-source" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+                    <button type="button" onclick="toggleModal('edit-expense-modal')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Update Expense</button>
                 </div>
             </form>
         </div>

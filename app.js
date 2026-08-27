@@ -23,6 +23,7 @@ let equipment = [];
 let programs = [];
 let checkouts = [];
 let fundAdditions = [];
+let fundExpenses = [];
 let currentUserRole = sessionStorage.getItem('mediaWingRole') || null;
 
 function checkAuth() {
@@ -86,6 +87,22 @@ async function initData() {
             programs = data.programs || [];
             checkouts = data.checkouts || [];
             fundAdditions = data.fundAdditions || [];
+            fundExpenses = data.fundExpenses || [];
+            
+            // Auto-migrate old public equipment to fundExpenses if they aren't there
+            let migrated = false;
+            equipment.filter(e => e.ownership === 'Public').forEach(eq => {
+                if (!fundExpenses.find(fe => fe.linkedEqId === eq.id)) {
+                    fundExpenses.push({
+                        id: 'exp_' + eq.id,
+                        amount: parseFloat(eq.price || 0),
+                        description: `Equipment: ${eq.name} (${eq.customId})`,
+                        date: eq.addedOn || new Date().toISOString(),
+                        linkedEqId: eq.id
+                    });
+                    migrated = true;
+                }
+            });
             
             // Self-healing: Recalculate availableQty to fix any lost items
             equipment.forEach(eq => {
@@ -106,8 +123,10 @@ async function initData() {
             renderInventory();
             renderHistoryTable();
             renderFundsTab(); // Initial render for funds
+            
+            if (migrated) saveData().catch(console.error); // Save migration silently
         } else {
-            setDoc(docRef, { equipment: [], programs: [], checkouts: [], fundAdditions: [] });
+            setDoc(docRef, { equipment: [], programs: [], checkouts: [], fundAdditions: [], fundExpenses: [] });
         }
     } catch (err) {
         console.error("Error loading data from Firebase", err);
@@ -122,7 +141,8 @@ async function saveData() {
             equipment,
             programs,
             checkouts,
-            fundAdditions
+            fundAdditions,
+            fundExpenses
         });
         // We do NOT call updateDashboard here anymore, 
         // we call it instantly before saveData.
@@ -328,6 +348,15 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
         };
 
         equipment.push(newItem);
+        if (ownership === 'Public') {
+            fundExpenses.push({
+                id: 'exp_' + eqId,
+                amount: parseFloat(price || 0),
+                description: `Equipment: ${name} (${customId})`,
+                date: newItem.addedOn,
+                linkedEqId: eqId
+            });
+        }
         
         // Optimistic UI Update (Instant!)
         updateDashboard();
@@ -638,6 +667,28 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
             const billRef = doc(db, "mediaWingImages", billDocId);
             await setDoc(billRef, { data: billBase64 });
             item.hasBill = true;
+        }
+
+        // Update linked fund expense if public
+        if (item.ownership === 'Public') {
+            const linkedExpense = fundExpenses.find(fe => fe.linkedEqId === id);
+            if (linkedExpense) {
+                linkedExpense.amount = parseFloat(item.price || 0);
+                linkedExpense.description = `Equipment: ${item.name} (${item.customId})`;
+            } else {
+                // If they changed Personal -> Public, we create it
+                fundExpenses.push({
+                    id: 'exp_' + id,
+                    amount: parseFloat(item.price || 0),
+                    description: `Equipment: ${item.name} (${item.customId})`,
+                    date: item.addedOn || new Date().toISOString(),
+                    linkedEqId: id
+                });
+            }
+        } else {
+            // If they changed Public -> Personal, we remove the expense (because it shouldn't exist)
+            // Wait, the user said deleting equipment doesn't refund. But changing Public -> Personal MEANS it was never a public expense. I'll just remove it for consistency, or leave it. Removing it makes sense since it's no longer public.
+            fundExpenses = fundExpenses.filter(fe => fe.linkedEqId !== id);
         }
 
         toggleModal('edit-item-modal');
@@ -1315,6 +1366,7 @@ function renderFundsTab() {
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${f.source}</td>
                 <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">₹${f.amount.toLocaleString()}</td>
                 <td class="px-4 py-3 text-sm text-center">
+                    <button onclick="editFundAddition('${f.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Fund"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundAddition('${f.id}')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
@@ -1329,24 +1381,27 @@ function renderFundsTab() {
     const usageBody = document.getElementById('fund-usage-body');
     usageBody.innerHTML = '';
 
-    const publicEq = equipment.filter(e => e.ownership === 'Public');
-    // Sort by date added descending
-    publicEq.sort((a, b) => new Date(b.addedOn || 0) - new Date(a.addedOn || 0));
+    // Sort by date descending
+    const sortedExpenses = [...fundExpenses].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    publicEq.forEach(eq => {
-        const price = parseFloat(eq.price || 0);
+    sortedExpenses.forEach(exp => {
+        const price = parseFloat(exp.amount || 0);
         totalSpent += price;
         usageBody.innerHTML += `
             <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm text-gray-700">${eq.addedOn ? new Date(eq.addedOn).toLocaleDateString() : 'N/A'}</td>
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">${eq.name} (${eq.customId})</td>
+                <td class="px-4 py-3 text-sm text-gray-700">${exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A'}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${exp.description}</td>
                 <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">₹${price.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm text-center">
+                    <button onclick="editFundExpense('${exp.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Expense"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteFundExpense('${exp.id}')" class="text-red-500 hover:text-red-700" title="Delete Expense"><i class="fas fa-trash-alt"></i></button>
+                </td>
             </tr>
         `;
     });
 
-    if (publicEq.length === 0) {
-        usageBody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-sm text-center text-gray-500">No public equipment bought yet.</td></tr>';
+    if (sortedExpenses.length === 0) {
+        usageBody.innerHTML = '<tr><td colspan="4" class="px-4 py-3 text-sm text-center text-gray-500">No expenses recorded yet.</td></tr>';
     }
 
     const available = totalCollected - totalSpent;
@@ -1365,50 +1420,104 @@ function renderFundsTab() {
     }
 }
 
+// --- Add Fund ---
 document.getElementById('add-fund-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (currentUserRole !== 'admin') return;
 
     const amount = parseFloat(document.getElementById('fund-amount').value);
     const source = document.getElementById('fund-source').value.trim();
-
     if (!amount || amount <= 0) return alert("Enter a valid amount.");
 
-    const newFund = {
-        id: 'fund_' + Date.now(),
-        amount: amount,
-        source: source,
-        date: new Date().toISOString()
-    };
+    const newFund = { id: 'fund_' + Date.now(), amount, source, date: new Date().toISOString() };
+    fundAdditions.push(newFund);
+    
+    toggleModal('add-fund-modal');
+    document.getElementById('add-fund-form').reset();
+    renderFundsTab();
+    showToast('Fund added successfully!');
+    saveData().catch(console.error);
+});
 
-    const saveBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnHtml = saveBtn.innerHTML;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-    saveBtn.disabled = true;
+// --- Edit/Delete Fund ---
+window.editFundAddition = function(id) {
+    const f = fundAdditions.find(x => x.id === id);
+    if(!f) return;
+    document.getElementById('edit-fund-id').value = id;
+    document.getElementById('edit-fund-amount').value = f.amount;
+    document.getElementById('edit-fund-source').value = f.source;
+    toggleModal('edit-fund-modal');
+};
 
-    try {
-        fundAdditions.push(newFund);
-        renderFundsTab(); // Update UI instantly
-        toggleModal('add-fund-modal');
-        document.getElementById('add-fund-form').reset();
-        
-        showToast('Fund added successfully!');
-        await saveData();
-    } catch (err) {
-        console.error(err);
-        alert("Failed to save fund: " + err.message);
-    } finally {
-        saveBtn.innerHTML = originalBtnHtml;
-        saveBtn.disabled = false;
+document.getElementById('edit-fund-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-fund-id').value;
+    const f = fundAdditions.find(x => x.id === id);
+    if(f) {
+        f.amount = parseFloat(document.getElementById('edit-fund-amount').value);
+        f.source = document.getElementById('edit-fund-source').value.trim();
+        toggleModal('edit-fund-modal');
+        renderFundsTab();
+        showToast('Fund updated.');
+        saveData().catch(console.error);
     }
 });
 
 window.deleteFundAddition = async function(id) {
     if (!confirm("Are you sure you want to delete this fund entry? This will reduce the available balance.")) return;
-    
     fundAdditions = fundAdditions.filter(f => f.id !== id);
-    renderFundsTab(); // Update UI instantly
-    
+    renderFundsTab();
     showToast('Fund entry deleted.');
+    await saveData().catch(e => console.error(e));
+};
+
+// --- Add Expense ---
+document.getElementById('add-expense-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (currentUserRole !== 'admin') return;
+
+    const amount = parseFloat(document.getElementById('expense-amount').value);
+    const source = document.getElementById('expense-source').value.trim();
+    if (!amount || amount <= 0) return alert("Enter a valid amount.");
+
+    const newExp = { id: 'exp_manual_' + Date.now(), amount, description: source, date: new Date().toISOString() };
+    fundExpenses.push(newExp);
+    
+    toggleModal('add-expense-modal');
+    document.getElementById('add-expense-form').reset();
+    renderFundsTab();
+    showToast('Expense added successfully!');
+    saveData().catch(console.error);
+});
+
+// --- Edit/Delete Expense ---
+window.editFundExpense = function(id) {
+    const exp = fundExpenses.find(x => x.id === id);
+    if(!exp) return;
+    document.getElementById('edit-expense-id').value = id;
+    document.getElementById('edit-expense-amount').value = exp.amount;
+    document.getElementById('edit-expense-source').value = exp.description;
+    toggleModal('edit-expense-modal');
+};
+
+document.getElementById('edit-expense-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-expense-id').value;
+    const exp = fundExpenses.find(x => x.id === id);
+    if(exp) {
+        exp.amount = parseFloat(document.getElementById('edit-expense-amount').value);
+        exp.description = document.getElementById('edit-expense-source').value.trim();
+        toggleModal('edit-expense-modal');
+        renderFundsTab();
+        showToast('Expense updated.');
+        saveData().catch(console.error);
+    }
+});
+
+window.deleteFundExpense = async function(id) {
+    if (!confirm("Are you sure you want to delete this expense? This will INCREASE the available balance.")) return;
+    fundExpenses = fundExpenses.filter(f => f.id !== id);
+    renderFundsTab();
+    showToast('Expense deleted.');
     await saveData().catch(e => console.error(e));
 };
