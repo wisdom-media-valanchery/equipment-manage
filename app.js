@@ -460,12 +460,41 @@ document.getElementById('search-inventory').addEventListener('input', (e) => {
     renderInventory(filtered);
 });
 
+const thumbnailCache = {};
+
+async function loadThumbnail(eqId, imgElementId) {
+    const el = document.getElementById(imgElementId);
+    if (!el) return;
+    
+    if (thumbnailCache[eqId]) {
+        if (thumbnailCache[eqId] !== 'none') {
+            el.innerHTML = `<img src="${thumbnailCache[eqId]}" class="h-10 w-10 object-cover rounded shadow-sm">`;
+        }
+        return;
+    }
+    
+    try {
+        const docSnap = await getDoc(doc(db, "mediaWingImages", eqId + "_photo_0"));
+        if (docSnap.exists()) {
+            const dataUrl = docSnap.data().data;
+            thumbnailCache[eqId] = dataUrl;
+            el.innerHTML = `<img src="${dataUrl}" class="h-10 w-10 object-cover rounded shadow-sm">`;
+        } else {
+            thumbnailCache[eqId] = 'none';
+            el.innerHTML = `<div class="h-10 w-10 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
+        }
+    } catch(e) {
+        console.error("Error loading thumbnail", e);
+        thumbnailCache[eqId] = 'none';
+    }
+}
+
 function renderInventory(listToRender = equipment) {
     const tbody = document.getElementById('inventory-table-body');
     tbody.innerHTML = '';
 
     if (listToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No equipment found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No equipment found.</td></tr>';
         return;
     }
 
@@ -477,6 +506,9 @@ function renderInventory(listToRender = equipment) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${item.customId || '-'}</td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div id="thumb-${item.id}" class="h-10 w-10 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+            </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${item.name}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.category}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">${ownershipBadge}</td>
@@ -503,6 +535,15 @@ function renderInventory(listToRender = equipment) {
             </td>
         `;
         tbody.appendChild(tr);
+        if (item.photoCount && item.photoCount > 0) {
+            loadThumbnail(item.id, `thumb-${item.id}`);
+        } else {
+            const thumbEl = document.getElementById(`thumb-${item.id}`);
+            if (thumbEl) {
+                thumbEl.innerHTML = `<div class="h-10 w-10 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
+                thumbEl.classList.remove('animate-pulse');
+            }
+        }
     });
 }
 
@@ -938,18 +979,32 @@ function renderAlreadyCheckedOut() {
     container.classList.remove('hidden');
     listEl.innerHTML = '';
     
-    checkoutRecord.items.forEach(item => {
+    checkoutRecord.items.forEach((item, idx) => {
         const eq = equipment.find(e => e.id === item.equipmentId);
         if(!eq) return;
         
-        listEl.innerHTML += `
-            <li class="p-3 flex justify-between items-center text-sm">
+        const li = document.createElement('li');
+        li.className = "p-3 flex justify-between items-center text-sm border-b last:border-0";
+        li.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div id="thumb-aco-${eq.id}-${idx}" class="h-8 w-8 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
                 <span><span class="font-semibold text-gray-800">${eq.name}</span> <span class="text-gray-500 ml-2">Total Taken: ${item.qtyTaken}</span></span>
-                <button onclick="removeAlreadyCheckedOut('${eq.id}')" class="text-red-600 hover:text-red-800 text-xs px-3 py-1 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50">
-                    <i class="fas fa-trash mr-1"></i> Remove
-                </button>
-            </li>
+            </div>
+            <button onclick="removeAlreadyCheckedOut('${eq.id}')" class="text-red-600 hover:text-red-800 text-xs px-3 py-1 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50">
+                <i class="fas fa-trash mr-1"></i> Remove
+            </button>
         `;
+        listEl.appendChild(li);
+
+        if (eq.photoCount && eq.photoCount > 0) {
+            loadThumbnail(eq.id, `thumb-aco-${eq.id}-${idx}`);
+        } else {
+            const thumbEl = document.getElementById(`thumb-aco-${eq.id}-${idx}`);
+            if (thumbEl) {
+                thumbEl.innerHTML = `<div class="h-8 w-8 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
+                thumbEl.classList.remove('animate-pulse');
+            }
+        }
     });
 }
 
@@ -1020,12 +1075,27 @@ function renderCart() {
 
     cartEl.innerHTML = '';
     currentCheckoutCart.forEach((item, index) => {
-        cartEl.innerHTML += `
-            <li class="p-3 flex justify-between items-center text-sm">
-                <span><span class="font-semibold">${item.name}</span> x ${item.qty}</span>
-                <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i></button>
-            </li>
+        const eq = equipment.find(e => e.id === item.id);
+        const li = document.createElement('li');
+        li.className = "p-3 flex justify-between items-center text-sm border-b last:border-0";
+        li.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div id="thumb-cart-${item.id}-${index}" class="h-8 w-8 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+                <span><span class="font-semibold">${item.name}</span> <span class="text-gray-500 text-xs ml-1">x ${item.qty}</span></span>
+            </div>
+            <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 text-xs px-2 py-1"><i class="fas fa-times"></i></button>
         `;
+        cartEl.appendChild(li);
+
+        if (eq && eq.photoCount && eq.photoCount > 0) {
+            loadThumbnail(eq.id, `thumb-cart-${item.id}-${index}`);
+        } else {
+            const thumbEl = document.getElementById(`thumb-cart-${item.id}-${index}`);
+            if (thumbEl) {
+                thumbEl.innerHTML = `<div class="h-8 w-8 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
+                thumbEl.classList.remove('animate-pulse');
+            }
+        }
     });
     btn.disabled = false;
 }
@@ -1107,7 +1177,7 @@ function renderCheckinTable() {
     const checkoutRecord = checkouts.find(c => c.programId === selectedCheckinProgramId);
     
     if (!checkoutRecord || checkoutRecord.items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No items were checked out for this program.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">No items were checked out for this program.</td></tr>';
         return;
     }
 
@@ -1119,6 +1189,9 @@ function renderCheckinTable() {
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div id="thumb-checkin-${eq.id}" class="h-10 w-10 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+            </td>
             <td class="px-4 py-3 text-sm font-medium text-gray-900">${eq.name}</td>
             <td class="px-4 py-3 text-sm text-center">${item.qtyTaken}</td>
             <td class="px-4 py-3 text-sm text-center font-bold text-blue-600">${item.qtyReturned}</td>
@@ -1137,6 +1210,16 @@ function renderCheckinTable() {
             </td>
         `;
         tbody.appendChild(tr);
+
+        if (eq.photoCount && eq.photoCount > 0) {
+            loadThumbnail(eq.id, `thumb-checkin-${eq.id}`);
+        } else {
+            const thumbEl = document.getElementById(`thumb-checkin-${eq.id}`);
+            if (thumbEl) {
+                thumbEl.innerHTML = `<div class="h-10 w-10 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
+                thumbEl.classList.remove('animate-pulse');
+            }
+        }
     });
 }
 
