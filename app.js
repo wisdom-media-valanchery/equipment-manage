@@ -77,7 +77,7 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
     const err = document.getElementById('login-error');
     
     // Simple hardcoded auth (can be expanded to Firestore later)
-    if (u === 'admin' && p === 'admin123') {
+    if (u === 'admin' && p === 'admin2026') {
         currentUserRole = 'admin';
         sessionStorage.setItem('mediaWingRole', 'admin');
         err.classList.add('hidden');
