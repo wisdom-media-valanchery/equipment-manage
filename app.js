@@ -416,7 +416,7 @@ window.toggleEditOwnershipFields = function() {
     }
 };
 
-window.openEditModal = function(id) {
+window.openEditModal = async function(id) {
     if (currentUserRole !== 'admin') return;
     const item = equipment.find(e => e.id === id);
     if (!item) return;
@@ -459,6 +459,36 @@ window.openEditModal = function(id) {
     }
 
     toggleModal('edit-item-modal');
+
+    // Fetch and display existing photos
+    const photosContainer = document.getElementById('edit-current-photos');
+    photosContainer.innerHTML = '<div class="text-gray-500 text-sm">Loading...</div>';
+    if (item.photoCount && item.photoCount > 0) {
+        let imgsHtml = '';
+        for (let i = 0; i < item.photoCount; i++) {
+            const photoDoc = await getDoc(doc(db, "mediaWingImages", `${id}_photo_${i}`));
+            if (photoDoc.exists() && photoDoc.data().data) {
+                imgsHtml += `<img src="${photoDoc.data().data}" class="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src)">`;
+            }
+        }
+        photosContainer.innerHTML = imgsHtml || '<div class="text-gray-500 text-sm">No existing photos.</div>';
+    } else {
+        photosContainer.innerHTML = '<div class="text-gray-500 text-sm">No existing photos.</div>';
+    }
+
+    // Fetch and display existing bill
+    const billContainer = document.getElementById('edit-current-bill');
+    if (item.hasBill) {
+        billContainer.innerHTML = '<div class="text-gray-500 text-sm">Loading...</div>';
+        const billDoc = await getDoc(doc(db, "mediaWingImages", `${id}_bill`));
+        if (billDoc.exists() && billDoc.data().data) {
+            billContainer.innerHTML = `<img src="${billDoc.data().data}" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src)">`;
+        } else {
+            billContainer.innerHTML = '<div class="text-gray-500 text-sm">No bill attached.</div>';
+        }
+    } else {
+        billContainer.innerHTML = '<div class="text-gray-500 text-sm">No bill attached.</div>';
+    }
 };
 
 window.restoreMissingEquipment = async function() {

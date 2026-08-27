@@ -400,6 +400,14 @@
                     </div>
                 </div>
 
+                <!-- Current Photos Preview -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Photos</label>
+                    <div id="edit-current-photos" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="text-gray-500 text-sm">Loading...</div>
+                    </div>
+                </div>
+
                 <!-- Product Photo -->
                 <div class="mb-4 p-3 bg-gray-50 border rounded">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Replace Photo(s)</label>
@@ -429,6 +437,10 @@
                         <input type="number" id="edit-item-price" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 5000">
                     </div>
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Bill</label>
+                        <div id="edit-current-bill" class="mb-3">
+                            <span class="text-gray-500 text-sm">Loading...</span>
+                        </div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Replace Bill / Receipt</label>
                         <input type="file" id="edit-item-bill" accept="image/*,.pdf" class="w-full text-sm">
                         <p class="text-xs text-gray-500 mt-1">Leave empty to keep existing bill.</p>
