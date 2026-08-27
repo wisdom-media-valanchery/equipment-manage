@@ -414,6 +414,13 @@
                         <input type="file" id="edit-item-bill" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                         <p class="text-xs text-gray-500 mt-1">Leave empty to keep existing bill.</p>
                     </div>
+                    
+                    <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-md hidden" id="edit-missing-container">
+                        <p class="text-sm text-red-800 mb-2"><i class="fas fa-exclamation-circle mr-1"></i> This item has <span id="edit-missing-qty" class="font-bold"></span> units marked as "Missing" from past programs.</p>
+                        <button type="button" onclick="restoreMissingEquipment()" class="bg-red-600 text-white px-3 py-1.5 text-xs rounded hover:bg-red-700">
+                            <i class="fas fa-undo"></i> Mark as Found (Make Available)
+                        </button>
+                    </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-3 sticky bottom-0 bg-white pt-4 border-t">
                     <button type="button" onclick="toggleModal('edit-item-modal')" class="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>

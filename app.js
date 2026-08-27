@@ -440,7 +440,57 @@ window.openEditModal = function(id) {
     document.getElementById('edit-item-photos').value = '';
     document.getElementById('edit-item-bill').value = '';
 
+    // Check missing items
+    let missingQty = 0;
+    checkouts.forEach(c => {
+        const i = c.items.find(it => it.equipmentId === id);
+        if (i && i.qtyReturned < i.qtyTaken) {
+            missingQty += (i.qtyTaken - i.qtyReturned);
+        }
+    });
+    
+    const missingContainer = document.getElementById('edit-missing-container');
+    if (missingQty > 0) {
+        document.getElementById('edit-missing-qty').textContent = missingQty;
+        missingContainer.classList.remove('hidden');
+    } else {
+        missingContainer.classList.add('hidden');
+    }
+
     toggleModal('edit-item-modal');
+};
+
+window.restoreMissingEquipment = async function() {
+    const id = document.getElementById('edit-item-id').value;
+    if(!confirm("This will mark all missing units of this equipment as found and returned, making them available in stock again. Proceed?")) return;
+    
+    // Auto-return all missing of this item across all history
+    checkouts.forEach(c => {
+        const i = c.items.find(it => it.equipmentId === id);
+        if (i && i.qtyReturned < i.qtyTaken) {
+            i.qtyReturned = i.qtyTaken; // Restored
+        }
+    });
+    
+    // Quick recalculate for UI
+    const item = equipment.find(e => e.id === id);
+    if(item) {
+        let currentlyOut = 0;
+        checkouts.forEach(c => {
+            const it = c.items.find(x => x.equipmentId === item.id);
+            if (it) {
+                currentlyOut += (it.qtyTaken - it.qtyReturned);
+            }
+        });
+        item.availableQty = item.totalQty - currentlyOut;
+    }
+    
+    document.getElementById('edit-missing-container').classList.add('hidden');
+    updateDashboard();
+    renderInventory();
+    
+    showToast('Missing items marked as found and are now available.');
+    await saveData().catch(err => console.error(err));
 };
 
 document.getElementById('edit-item-form')?.addEventListener('submit', async (e) => {
