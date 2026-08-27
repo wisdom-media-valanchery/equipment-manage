@@ -406,17 +406,13 @@ function renderInventory(listToRender = equipment) {
 }
 
 window.toggleEditOwnershipFields = function() {
-    const val = document.getElementById('edit-item-ownership').value;
-    const rentalContainer = document.getElementById('edit-rental-fee-container');
-    const publicContainer = document.getElementById('edit-public-price-container');
-    
-    rentalContainer.classList.add('hidden');
-    publicContainer.classList.add('hidden');
-    
-    if (val === 'rental') {
-        rentalContainer.classList.remove('hidden');
-    } else if (val === 'public') {
-        publicContainer.classList.remove('hidden');
+    const ownership = document.querySelector('input[name="edit_ownership"]:checked').value;
+    if (ownership === 'Personal') {
+        document.getElementById('edit-personal-fields').classList.remove('hidden');
+        document.getElementById('edit-public-fields').classList.add('hidden');
+    } else {
+        document.getElementById('edit-personal-fields').classList.add('hidden');
+        document.getElementById('edit-public-fields').classList.remove('hidden');
     }
 };
 
@@ -426,14 +422,19 @@ window.openEditModal = function(id) {
     if (!item) return;
 
     document.getElementById('edit-item-id').value = item.id;
-    document.getElementById('edit-item-name').value = item.name;
     document.getElementById('edit-item-custom-id').value = item.customId || '';
-    document.getElementById('edit-item-desc').value = item.desc || '';
+    document.getElementById('edit-item-name').value = item.name;
+    document.getElementById('edit-item-category').value = item.category || 'Other';
     document.getElementById('edit-item-qty').value = item.totalQty;
     
-    document.getElementById('edit-item-ownership').value = item.ownership || 'wisdom';
-    document.getElementById('edit-item-rental-fee').value = item.rentalFee || '';
-    document.getElementById('edit-item-public-price').value = item.publicPrice || '';
+    // Set Ownership
+    if (item.ownership === 'Personal') {
+        document.getElementById('edit-own-personal').checked = true;
+        document.getElementById('edit-item-owner').value = item.owner || '';
+    } else {
+        document.getElementById('edit-own-public').checked = true;
+        document.getElementById('edit-item-price').value = item.price || '';
+    }
     toggleEditOwnershipFields();
     
     // Clear file inputs
@@ -509,11 +510,18 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
     try {
         item.name = document.getElementById('edit-item-name').value.trim();
         item.customId = document.getElementById('edit-item-custom-id').value.trim();
-        item.desc = document.getElementById('edit-item-desc').value.trim();
+        item.category = document.getElementById('edit-item-category').value;
         
-        item.ownership = document.getElementById('edit-item-ownership').value;
-        item.rentalFee = item.ownership === 'rental' ? parseFloat(document.getElementById('edit-item-rental-fee').value) || 0 : 0;
-        item.publicPrice = item.ownership === 'public' ? parseFloat(document.getElementById('edit-item-public-price').value) || 0 : 0;
+        const ownership = document.querySelector('input[name="edit_ownership"]:checked').value;
+        item.ownership = ownership;
+        
+        if (ownership === 'Personal') {
+            item.owner = document.getElementById('edit-item-owner').value.trim();
+            item.price = 0;
+        } else {
+            item.price = parseFloat(document.getElementById('edit-item-price').value) || 0;
+            item.owner = '';
+        }
         
         const newTotal = parseInt(document.getElementById('edit-item-qty').value);
         const diff = newTotal - item.totalQty;
@@ -546,6 +554,8 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
         // Handle bill
         const billInput = document.getElementById('edit-item-bill');
         if (billInput.files.length > 0) {
+            // Can be image or PDF, but resizeImage handles images. If PDF, we might need a generic file reader if we want to store it, but currently the codebase only does resizeImage. 
+            // Wait, Add Equipment uses `resizeImage` for bill as well (it assumes image despite accept=".pdf"). I will just keep it identical to what Add Equipment does.
             const billBase64 = await resizeImage(billInput.files[0], 800, 800);
             const billDocId = `${id}_bill`;
             const billRef = doc(db, "mediaWingImages", billDocId);
