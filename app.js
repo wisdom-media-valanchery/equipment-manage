@@ -746,7 +746,7 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
             const maxPhotos = Math.min(photoInput.files.length, 4);
             const photoBase64Array = [];
             for(let i=0; i<maxPhotos; i++) {
-                const b64 = await resizeImage(photoInput.files[i], 800, 800);
+                const b64 = await compressImage(photoInput.files[i]);
                 photoBase64Array.push(b64);
             }
             // Save to Firestore Images
@@ -760,14 +760,15 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
                 }
             }
             item.photoCount = photoBase64Array.length;
+            
+            // Invalidate cache for new photo
+            if (thumbnailCache[id]) delete thumbnailCache[id];
         }
 
         // Handle bill
         const billInput = document.getElementById('edit-item-bill');
         if (billInput.files.length > 0) {
-            // Can be image or PDF, but resizeImage handles images. If PDF, we might need a generic file reader if we want to store it, but currently the codebase only does resizeImage. 
-            // Wait, Add Equipment uses `resizeImage` for bill as well (it assumes image despite accept=".pdf"). I will just keep it identical to what Add Equipment does.
-            const billBase64 = await resizeImage(billInput.files[0], 800, 800);
+            const billBase64 = await compressImage(billInput.files[0]);
             const billDocId = `${id}_bill`;
             const billRef = doc(db, "mediaWingImages", billDocId);
             await setDoc(billRef, { data: billBase64 });
