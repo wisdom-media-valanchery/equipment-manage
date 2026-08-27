@@ -321,6 +321,8 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
     const eqId = generateId();
     const customId = document.getElementById('eq-custom-id').value;
     const name = document.getElementById('eq-name').value;
+    const addedDateStr = document.getElementById('eq-date').value;
+    const addedOn = addedDateStr ? new Date(addedDateStr).toISOString() : new Date().toISOString();
     const category = document.getElementById('eq-category').value;
     const qty = parseInt(document.getElementById('eq-qty').value);
     const ownership = document.querySelector('input[name="ownership"]:checked').value;
@@ -369,7 +371,7 @@ document.getElementById('add-equipment-form').addEventListener('submit', async (
             ownerName,
             price,
             photoCount,
-            addedOn: new Date().toISOString(),
+            addedOn: addedOn,
             hasBill
         };
 
@@ -487,6 +489,7 @@ window.openEditModal = async function(id) {
     document.getElementById('edit-item-id').value = item.id;
     document.getElementById('edit-item-custom-id').value = item.customId || '';
     document.getElementById('edit-item-name').value = item.name;
+    document.getElementById('edit-item-date').value = item.addedOn ? item.addedOn.split('T')[0] : '';
     document.getElementById('edit-item-category').value = item.category || 'Other';
     document.getElementById('edit-item-qty').value = item.totalQty;
     
@@ -642,6 +645,10 @@ document.getElementById('edit-item-form')?.addEventListener('submit', async (e) 
     try {
         item.name = document.getElementById('edit-item-name').value.trim();
         item.customId = document.getElementById('edit-item-custom-id').value.trim();
+        const editDateStr = document.getElementById('edit-item-date').value;
+        if (editDateStr) {
+            item.addedOn = new Date(editDateStr).toISOString();
+        }
         item.category = document.getElementById('edit-item-category').value;
         
         const ownership = document.querySelector('input[name="edit_ownership"]:checked').value;
