@@ -144,12 +144,38 @@ async function saveData() {
             fundAdditions,
             fundExpenses
         });
+        
+        // Sync to Google Sheets in the background (fire and forget)
+        syncToGoogleSheets().catch(console.error);
+        
         // We do NOT call updateDashboard here anymore, 
         // we call it instantly before saveData.
     } catch (err) {
         console.error("Error saving data to Firebase", err);
         showToast('Error syncing with server.', 'error');
         throw err;
+    }
+}
+
+const GOOGLE_SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbyswVeTcH_xhpp2VeysjA7eltKmNaqZAlyBjMUg8mVr7krE91mKIlHShgjah0qzWB8B/exec";
+
+async function syncToGoogleSheets() {
+    try {
+        const payload = {
+            equipment,
+            fundAdditions,
+            fundExpenses
+        };
+        fetch(GOOGLE_SHEETS_WEBHOOK, {
+            method: 'POST',
+            mode: 'no-cors', // Bypasses strict CORS restrictions for GAS
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8' // Prevents preflight OPTIONS request
+            },
+            body: JSON.stringify(payload)
+        }).catch(err => console.error('Error syncing to Google Sheets:', err));
+    } catch (err) {
+        console.error("Failed to prepare sync payload", err);
     }
 }
 
