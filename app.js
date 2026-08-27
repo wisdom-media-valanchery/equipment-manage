@@ -507,7 +507,7 @@ function renderInventory(listToRender = equipment) {
         tr.innerHTML = `
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${item.customId || '-'}</td>
             <td class="px-4 py-3 whitespace-nowrap">
-                <div id="thumb-${item.id}" class="h-10 w-10 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+                <div id="thumb-${item.id}" class="h-10 w-10 bg-gray-100 rounded flex items-center justify-center"></div>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${item.name}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.category}</td>
@@ -541,7 +541,7 @@ function renderInventory(listToRender = equipment) {
             const thumbEl = document.getElementById(`thumb-${item.id}`);
             if (thumbEl) {
                 thumbEl.innerHTML = `<div class="h-10 w-10 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
-                thumbEl.classList.remove('animate-pulse');
+
             }
         }
     });
@@ -987,7 +987,7 @@ function renderAlreadyCheckedOut() {
         li.className = "p-3 flex justify-between items-center text-sm border-b last:border-0";
         li.innerHTML = `
             <div class="flex items-center gap-3">
-                <div id="thumb-aco-${eq.id}-${idx}" class="h-8 w-8 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+                <div id="thumb-aco-${eq.id}-${idx}" class="h-8 w-8 bg-gray-100 rounded flex items-center justify-center"></div>
                 <span><span class="font-semibold text-gray-800">${eq.name}</span> <span class="text-gray-500 ml-2">Total Taken: ${item.qtyTaken}</span></span>
             </div>
             <button onclick="removeAlreadyCheckedOut('${eq.id}')" class="text-red-600 hover:text-red-800 text-xs px-3 py-1 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50">
@@ -1002,7 +1002,7 @@ function renderAlreadyCheckedOut() {
             const thumbEl = document.getElementById(`thumb-aco-${eq.id}-${idx}`);
             if (thumbEl) {
                 thumbEl.innerHTML = `<div class="h-8 w-8 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
-                thumbEl.classList.remove('animate-pulse');
+
             }
         }
     });
@@ -1080,7 +1080,7 @@ function renderCart() {
         li.className = "p-3 flex justify-between items-center text-sm border-b last:border-0";
         li.innerHTML = `
             <div class="flex items-center gap-3">
-                <div id="thumb-cart-${item.id}-${index}" class="h-8 w-8 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+                <div id="thumb-cart-${item.id}-${index}" class="h-8 w-8 bg-gray-100 rounded flex items-center justify-center"></div>
                 <span><span class="font-semibold">${item.name}</span> <span class="text-gray-500 text-xs ml-1">x ${item.qty}</span></span>
             </div>
             <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 text-xs px-2 py-1"><i class="fas fa-times"></i></button>
@@ -1093,7 +1093,7 @@ function renderCart() {
             const thumbEl = document.getElementById(`thumb-cart-${item.id}-${index}`);
             if (thumbEl) {
                 thumbEl.innerHTML = `<div class="h-8 w-8 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
-                thumbEl.classList.remove('animate-pulse');
+
             }
         }
     });
@@ -1190,7 +1190,7 @@ function renderCheckinTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-4 py-3 whitespace-nowrap">
-                <div id="thumb-checkin-${eq.id}" class="h-10 w-10 bg-gray-100 animate-pulse rounded flex items-center justify-center"></div>
+                <div id="thumb-checkin-${eq.id}" class="h-10 w-10 bg-gray-100 rounded flex items-center justify-center"></div>
             </td>
             <td class="px-4 py-3 text-sm font-medium text-gray-900">${eq.name}</td>
             <td class="px-4 py-3 text-sm text-center">${item.qtyTaken}</td>
@@ -1217,7 +1217,7 @@ function renderCheckinTable() {
             const thumbEl = document.getElementById(`thumb-checkin-${eq.id}`);
             if (thumbEl) {
                 thumbEl.innerHTML = `<div class="h-10 w-10 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
-                thumbEl.classList.remove('animate-pulse');
+
             }
         }
     });
