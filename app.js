@@ -45,6 +45,9 @@ function checkAuth() {
 
         if (currentUserRole === 'staff') {
             adminElements.forEach(el => el.classList.add('hidden'));
+        } else if (currentUserRole === 'fund') {
+            adminElements.forEach(el => el.classList.remove('hidden'));
+            authElements.forEach(el => el.classList.add('hidden')); 
         } else {
             adminElements.forEach(el => el.classList.remove('hidden'));
         }
@@ -85,6 +88,11 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
     } else if (u === 'member' && p === 'member1122') {
         currentUserRole = 'staff';
         sessionStorage.setItem('mediaWingRole', 'staff');
+        err.classList.add('hidden');
+        checkAuth();
+    } else if (u === 'fund' && p === 'fund2026') {
+        currentUserRole = 'fund';
+        sessionStorage.setItem('mediaWingRole', 'fund');
         err.classList.add('hidden');
         checkAuth();
     } else {
@@ -476,7 +484,7 @@ function renderInventory(listToRender = equipment) {
                     <button onclick="viewEquipment('${item.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fas fa-eye"></i> View
                     </button>
-                    ${currentUserRole === 'admin' ? `
+                    ${(currentUserRole === 'admin' || currentUserRole === 'fund') ? `
                     <button onclick="openEditModal('${item.id}')" class="bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fas fa-edit"></i> Edit
                     </button>
@@ -503,7 +511,7 @@ window.toggleEditOwnershipFields = function() {
 };
 
 window.openEditModal = async function(id) {
-    if (currentUserRole !== 'admin') return;
+    if (currentUserRole !== 'admin' && currentUserRole !== 'fund') return;
     const item = equipment.find(e => e.id === id);
     if (!item) return;
 
@@ -651,7 +659,7 @@ window.restoreMissingEquipment = async function() {
 
 document.getElementById('edit-item-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'admin') return;
+    if (currentUserRole !== 'admin' && currentUserRole !== 'fund') return;
 
     const id = document.getElementById('edit-item-id').value;
     const item = equipment.find(e => e.id === id);
@@ -1412,7 +1420,7 @@ function renderFundsTab() {
                 <td class="px-4 py-3 text-sm text-gray-700">${new Date(f.date).toLocaleDateString()}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${f.source}</td>
                 <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">₹${f.amount.toLocaleString()}</td>
-                <td class="px-4 py-3 text-sm text-center admin-only ${currentUserRole === 'admin' ? '' : 'hidden'}">
+                <td class="px-4 py-3 text-sm text-center admin-only ${(currentUserRole === 'admin' || currentUserRole === 'fund') ? '' : 'hidden'}">
                     <button onclick="editFundAddition('${f.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Fund"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundAddition('${f.id}')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -1439,7 +1447,7 @@ function renderFundsTab() {
                 <td class="px-4 py-3 text-sm text-gray-700">${exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A'}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${exp.description}</td>
                 <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">₹${price.toLocaleString()}</td>
-                <td class="px-4 py-3 text-sm text-center admin-only ${currentUserRole === 'admin' ? '' : 'hidden'}">
+                <td class="px-4 py-3 text-sm text-center admin-only ${(currentUserRole === 'admin' || currentUserRole === 'fund') ? '' : 'hidden'}">
                     <button onclick="editFundExpense('${exp.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Expense"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundExpense('${exp.id}')" class="text-red-500 hover:text-red-700" title="Delete Expense"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -1470,7 +1478,7 @@ function renderFundsTab() {
 // --- Add Fund ---
 document.getElementById('add-fund-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'admin') return;
+    if (currentUserRole !== 'admin' && currentUserRole !== 'fund') return;
 
     const amount = parseFloat(document.getElementById('fund-amount').value);
     const source = document.getElementById('fund-source').value.trim();
@@ -1521,7 +1529,7 @@ window.deleteFundAddition = async function(id) {
 // --- Add Expense ---
 document.getElementById('add-expense-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (currentUserRole !== 'admin') return;
+    if (currentUserRole !== 'admin' && currentUserRole !== 'fund') return;
 
     const amount = parseFloat(document.getElementById('expense-amount').value);
     const source = document.getElementById('expense-source').value.trim();
