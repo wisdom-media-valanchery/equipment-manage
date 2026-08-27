@@ -27,24 +27,47 @@ let fundExpenses = [];
 let currentUserRole = sessionStorage.getItem('mediaWingRole') || null;
 
 function checkAuth() {
+    document.getElementById('login-screen').classList.add('hidden');
+    
+    const adminElements = document.querySelectorAll('.admin-only');
+    const authElements = document.querySelectorAll('.auth-only');
+    const authInfo = document.getElementById('auth-info-display');
+    const logoutBtn = document.getElementById('logout-btn');
+    const loginNavBtn = document.getElementById('login-btn-nav');
+
     if (currentUserRole) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('app-dashboard').classList.remove('hidden');
         document.getElementById('current-role-display').textContent = currentUserRole.toUpperCase();
+        authInfo.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        loginNavBtn.classList.add('hidden');
         
-        // Hide admin-only elements if user is staff
-        const adminElements = document.querySelectorAll('.admin-only');
+        authElements.forEach(el => el.classList.remove('hidden'));
+
         if (currentUserRole === 'staff') {
             adminElements.forEach(el => el.classList.add('hidden'));
         } else {
             adminElements.forEach(el => el.classList.remove('hidden'));
         }
-        
-        initData(); // Fetch data and render
     } else {
-        document.getElementById('login-screen').classList.remove('hidden');
-        document.getElementById('app-dashboard').classList.add('hidden');
+        // Public user
+        authInfo.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        loginNavBtn.classList.remove('hidden');
+        
+        authElements.forEach(el => el.classList.add('hidden'));
+        adminElements.forEach(el => el.classList.add('hidden'));
     }
+
+    // Always fetch and render data (public view)
+    initData();
+}
+
+window.openLoginModal = function() {
+    document.getElementById('login-screen').classList.remove('hidden');
+}
+
+window.closeLoginModal = function() {
+    document.getElementById('login-screen').classList.add('hidden');
 }
 
 document.getElementById('login-form').addEventListener('submit', (e) => {
@@ -1375,8 +1398,6 @@ checkAuth();
 // --- Fund Management Logic ---
 
 function renderFundsTab() {
-    if (currentUserRole !== 'admin') return; // Extra safety
-
     let totalCollected = 0;
     const additionsBody = document.getElementById('fund-additions-body');
     additionsBody.innerHTML = '';
@@ -1391,7 +1412,7 @@ function renderFundsTab() {
                 <td class="px-4 py-3 text-sm text-gray-700">${new Date(f.date).toLocaleDateString()}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${f.source}</td>
                 <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">₹${f.amount.toLocaleString()}</td>
-                <td class="px-4 py-3 text-sm text-center">
+                <td class="px-4 py-3 text-sm text-center admin-only ${currentUserRole === 'admin' ? '' : 'hidden'}">
                     <button onclick="editFundAddition('${f.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Fund"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundAddition('${f.id}')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -1418,7 +1439,7 @@ function renderFundsTab() {
                 <td class="px-4 py-3 text-sm text-gray-700">${exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A'}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${exp.description}</td>
                 <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">₹${price.toLocaleString()}</td>
-                <td class="px-4 py-3 text-sm text-center">
+                <td class="px-4 py-3 text-sm text-center admin-only ${currentUserRole === 'admin' ? '' : 'hidden'}">
                     <button onclick="editFundExpense('${exp.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Expense"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundExpense('${exp.id}')" class="text-red-500 hover:text-red-700" title="Delete Expense"><i class="fas fa-trash-alt"></i></button>
                 </td>
