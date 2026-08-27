@@ -45,8 +45,8 @@
         <!-- Sidebar -->
         <aside class="w-64 bg-gray-800 text-white flex-shrink-0 flex flex-col transition-transform duration-300 fixed inset-y-0 left-0 md:relative z-50 h-full transform -translate-x-full md:translate-x-0">
             <div class="p-6 text-center border-b border-gray-700 flex flex-col items-center">
-                <div class="bg-white p-2 rounded-lg mb-3 shadow-md inline-block">
-                    <img src="logo.png" alt="Media Wing Logo" class="h-16 w-auto object-contain">
+                <div class="bg-white rounded-lg mb-3 shadow-md inline-flex justify-center items-center overflow-hidden w-36 h-36">
+                    <img src="logo.png" alt="Media Wing Logo" class="w-full h-full object-cover transform scale-[1.35]">
                 </div>
                 <h1 class="text-xl font-bold tracking-wider text-white">Media Wing</h1>
                 <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest">Wisdom VLY</p>
@@ -87,8 +87,10 @@
             
             <!-- Mobile Header -->
             <header class="bg-white shadow-sm p-4 md:hidden flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <img src="logo.png" alt="Logo" class="h-8 w-auto">
+                <div class="flex items-center gap-2">
+                    <div class="h-10 w-10 overflow-hidden flex justify-center items-center rounded bg-white">
+                        <img src="logo.png" alt="Logo" class="w-full h-full object-cover transform scale-[1.35]">
+                    </div>
                     <h1 class="text-xl font-bold">Media Wing</h1>
                 </div>
                 <button id="mobile-menu-btn" class="text-gray-600 focus:outline-none">
