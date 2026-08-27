@@ -1295,7 +1295,6 @@ window.viewHistoryDetails = function(progId) {
 
 // Check auth and initialize app
 checkAuth();
-
 // --- Fund Management Logic ---
 
 function renderFundsTab() {
@@ -1310,16 +1309,16 @@ function renderFundsTab() {
 
     sortedAdditions.forEach(f => {
         totalCollected += parseFloat(f.amount);
-        additionsBody.innerHTML += \
+        additionsBody.innerHTML += `
             <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm text-gray-700">\</td>
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">\</td>
-                <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">?\</td>
+                <td class="px-4 py-3 text-sm text-gray-700">${new Date(f.date).toLocaleDateString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${f.source}</td>
+                <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">₹${f.amount.toLocaleString()}</td>
                 <td class="px-4 py-3 text-sm text-center">
-                    <button onclick="deleteFundAddition('\')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
+                    <button onclick="deleteFundAddition('${f.id}')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
-        \;
+        `;
     });
 
     if (sortedAdditions.length === 0) {
@@ -1337,13 +1336,13 @@ function renderFundsTab() {
     publicEq.forEach(eq => {
         const price = parseFloat(eq.price || 0);
         totalSpent += price;
-        usageBody.innerHTML += \
+        usageBody.innerHTML += `
             <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm text-gray-700">\</td>
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">\ (\)</td>
-                <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">?\</td>
+                <td class="px-4 py-3 text-sm text-gray-700">${eq.addedOn ? new Date(eq.addedOn).toLocaleDateString() : 'N/A'}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${eq.name} (${eq.customId})</td>
+                <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">₹${price.toLocaleString()}</td>
             </tr>
-        \;
+        `;
     });
 
     if (publicEq.length === 0) {
@@ -1352,11 +1351,11 @@ function renderFundsTab() {
 
     const available = totalCollected - totalSpent;
 
-    document.getElementById('fund-total-collected').textContent = '?' + totalCollected.toLocaleString();
-    document.getElementById('fund-total-spent').textContent = '?' + totalSpent.toLocaleString();
+    document.getElementById('fund-total-collected').textContent = '₹' + totalCollected.toLocaleString();
+    document.getElementById('fund-total-spent').textContent = '₹' + totalSpent.toLocaleString();
     
     const balanceEl = document.getElementById('fund-available-balance');
-    balanceEl.textContent = '?' + available.toLocaleString();
+    balanceEl.textContent = '₹' + available.toLocaleString();
     if (available < 0) {
         balanceEl.classList.remove('text-blue-600');
         balanceEl.classList.add('text-red-600');
@@ -1413,6 +1412,3 @@ window.deleteFundAddition = async function(id) {
     showToast('Fund entry deleted.');
     await saveData().catch(e => console.error(e));
 };
-
-// Also we need to ensure renderFundsTab is called when a public equipment is added, edited, or deleted.
-// updateDashboard() is called after all these actions. We can just add enderFundsTab() to updateDashboard().
