@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Wing Equipment Manager</title>
+    <link rel="icon" href="logo.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -43,9 +44,12 @@
     <div id="app-dashboard" class="h-screen overflow-hidden flex">
         <!-- Sidebar -->
         <aside class="w-64 bg-gray-800 text-white flex-shrink-0 flex flex-col transition-transform duration-300 fixed inset-y-0 left-0 md:relative z-50 h-full transform -translate-x-full md:translate-x-0">
-            <div class="p-6 text-center border-b border-gray-700">
-                <h1 class="text-2xl font-bold tracking-wider">Media Wing</h1>
-                <p class="text-xs text-gray-400 mt-1">Wisdom Valanchery</p>
+            <div class="p-6 text-center border-b border-gray-700 flex flex-col items-center">
+                <div class="bg-white p-2 rounded-lg mb-3 shadow-md inline-block">
+                    <img src="logo.png" alt="Media Wing Logo" class="h-16 w-auto object-contain">
+                </div>
+                <h1 class="text-xl font-bold tracking-wider text-white">Media Wing</h1>
+                <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest">Wisdom VLY</p>
             </div>
             <nav class="p-4 space-y-2 flex-grow overflow-y-auto">
                 <a href="#" class="nav-link active block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700" data-target="dashboard">
@@ -83,7 +87,10 @@
             
             <!-- Mobile Header -->
             <header class="bg-white shadow-sm p-4 md:hidden flex justify-between items-center">
-                <h1 class="text-xl font-bold">Media Wing Manager</h1>
+                <div class="flex items-center gap-3">
+                    <img src="logo.png" alt="Logo" class="h-8 w-auto">
+                    <h1 class="text-xl font-bold">Media Wing</h1>
+                </div>
                 <button id="mobile-menu-btn" class="text-gray-600 focus:outline-none">
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
