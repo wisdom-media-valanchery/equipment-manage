@@ -1510,7 +1510,7 @@ function renderFundsTab() {
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm text-gray-700">${new Date(f.date).toLocaleDateString()}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${f.source}</td>
-                <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">₹${f.amount.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-bold text-green-600 text-right">₹${f.amount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 <td class="px-4 py-3 text-sm text-center admin-only ${(currentUserRole === 'admin' || currentUserRole === 'fund') ? '' : 'hidden'}">
                     <button onclick="editFundAddition('${f.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Fund"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundAddition('${f.id}')" class="text-red-500 hover:text-red-700" title="Delete Fund"><i class="fas fa-trash-alt"></i></button>
@@ -1537,7 +1537,7 @@ function renderFundsTab() {
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm text-gray-700">${exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A'}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${exp.description}</td>
-                <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">₹${price.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-bold text-red-600 text-right">₹${price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 <td class="px-4 py-3 text-sm text-center admin-only ${(currentUserRole === 'admin' || currentUserRole === 'fund') ? '' : 'hidden'}">
                     <button onclick="editFundExpense('${exp.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit Expense"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteFundExpense('${exp.id}')" class="text-red-500 hover:text-red-700" title="Delete Expense"><i class="fas fa-trash-alt"></i></button>
@@ -1552,11 +1552,11 @@ function renderFundsTab() {
 
     const available = totalCollected - totalSpent;
 
-    document.getElementById('fund-total-collected').textContent = '₹' + totalCollected.toLocaleString();
-    document.getElementById('fund-total-spent').textContent = '₹' + totalSpent.toLocaleString();
+    document.getElementById('fund-total-collected').textContent = '₹' + totalCollected.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('fund-total-spent').textContent = '₹' + totalSpent.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     
     const balanceEl = document.getElementById('fund-available-balance');
-    balanceEl.textContent = '₹' + available.toLocaleString();
+    balanceEl.textContent = '₹' + available.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if (available < 0) {
         balanceEl.classList.remove('text-blue-600');
         balanceEl.classList.add('text-red-600');

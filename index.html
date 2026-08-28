@@ -379,7 +379,7 @@
             <form id="add-fund-form" class="p-6">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
-                    <input type="number" id="fund-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 10000">
+                    <input type="number" id="fund-amount" min="0" step="0.01" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 10000">
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Source / Description *</label>
@@ -403,7 +403,7 @@
             <form id="add-expense-form" class="p-6">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
-                    <input type="number" id="expense-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500" placeholder="e.g. 500">
+                    <input type="number" id="expense-amount" min="0" step="0.01" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500" placeholder="e.g. 500">
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Expense Description *</label>
@@ -428,7 +428,7 @@
                 <input type="hidden" id="edit-fund-id">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
-                    <input type="number" id="edit-fund-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" id="edit-fund-amount" min="0" step="0.01" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Source / Description *</label>
@@ -453,7 +453,7 @@
                 <input type="hidden" id="edit-expense-id">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
-                    <input type="number" id="edit-expense-amount" min="1" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500">
+                    <input type="number" id="edit-expense-amount" min="0" step="0.01" required class="w-full border border-gray-300 rounded p-2 focus:ring-red-500 focus:border-red-500">
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Expense Description *</label>
@@ -532,7 +532,7 @@
                 <div id="public-fields" class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded">
                     <div class="mb-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Price Details (₹)</label>
-                        <input type="number" id="eq-price" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 5000">
+                        <input type="number" id="eq-price" min="0" step="0.01" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 5000">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Upload Bill / Receipt</label>
@@ -629,7 +629,7 @@
                 <div id="edit-public-fields" class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded">
                     <div class="mb-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Price Details (₹)</label>
-                        <input type="number" id="edit-item-price" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 5000">
+                        <input type="number" id="edit-item-price" min="0" step="0.01" class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 5000">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Current Bill</label>
