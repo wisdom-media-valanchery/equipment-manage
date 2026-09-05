@@ -450,7 +450,7 @@ document.getElementById('search-inventory').addEventListener('input', (e) => {
     }
 
     let filtered = equipment.filter(item => {
-        const idMatch = item.customId && item.customId.toLowerCase().startsWith(term);
+        const idMatch = item.customId && item.customId.toLowerCase().split(',').some(idPart => idPart.trim().startsWith(term));
         const nameMatch = item.name && item.name.toLowerCase().split(' ').some(word => word.startsWith(term));
         return idMatch || nameMatch;
     });
