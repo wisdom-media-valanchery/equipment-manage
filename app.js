@@ -935,19 +935,37 @@ document.getElementById('create-program-form').addEventListener('submit', (e) =>
 let currentCheckoutCart = [];
 let selectedCheckoutProgramId = null;
 
+function updateCheckoutEquipmentDropdown() {
+    const eqSelect = document.getElementById('checkout-equipment-select');
+    const currentSelection = eqSelect.value;
+    
+    eqSelect.innerHTML = '<option value="">-- Select Equipment --</option>';
+    equipment.forEach(e => {
+        let cartQty = 0;
+        currentCheckoutCart.forEach(c => {
+            if (c.equipmentId === e.id) cartQty += c.qty;
+        });
+        const effectiveAvailable = e.availableQty - cartQty;
+        if (effectiveAvailable > 0) {
+            eqSelect.innerHTML += `<option value="${e.id}">${e.name} (Available: ${effectiveAvailable})</option>`;
+        }
+    });
+    
+    // Restore selection if it still exists
+    if (currentSelection && eqSelect.querySelector(`option[value="${currentSelection}"]`)) {
+        eqSelect.value = currentSelection;
+    }
+}
+
 function renderCheckoutOptions() {
     const progSelect = document.getElementById('checkout-program-select');
-    const eqSelect = document.getElementById('checkout-equipment-select');
     
     progSelect.innerHTML = '<option value="">-- Select a Program --</option>';
     programs.filter(p => p.status === 'Active').forEach(p => {
         progSelect.innerHTML += `<option value="${p.id}">${p.name} (${p.date})</option>`;
     });
 
-    eqSelect.innerHTML = '<option value="">-- Select Equipment --</option>';
-    equipment.filter(e => e.availableQty > 0).forEach(e => {
-        eqSelect.innerHTML += `<option value="${e.id}">${e.name} (Available: ${e.availableQty})</option>`;
-    });
+    updateCheckoutEquipmentDropdown();
 }
 
 document.getElementById('checkout-program-select').addEventListener('change', (e) => {
@@ -1071,17 +1089,18 @@ function renderCart() {
     if (currentCheckoutCart.length === 0) {
         cartEl.innerHTML = '<li class="text-gray-500 text-sm p-2 text-center" id="empty-cart-msg">No items selected yet.</li>';
         btn.disabled = true;
+        updateCheckoutEquipmentDropdown();
         return;
     }
 
     cartEl.innerHTML = '';
     currentCheckoutCart.forEach((item, index) => {
-        const eq = equipment.find(e => e.id === item.id);
+        const eq = equipment.find(e => e.id === item.equipmentId);
         const li = document.createElement('li');
         li.className = "p-3 flex justify-between items-center text-sm border-b last:border-0";
         li.innerHTML = `
             <div class="flex items-center gap-3">
-                <div id="thumb-cart-${item.id}-${index}" class="h-8 w-8 bg-gray-100 rounded flex items-center justify-center"></div>
+                <div id="thumb-cart-${item.equipmentId}-${index}" class="h-8 w-8 bg-gray-100 rounded flex items-center justify-center"></div>
                 <span><span class="font-semibold">${item.name}</span> <span class="text-gray-500 text-xs ml-1">x ${item.qty}</span></span>
             </div>
             <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 text-xs px-2 py-1"><i class="fas fa-times"></i></button>
@@ -1089,16 +1108,18 @@ function renderCart() {
         cartEl.appendChild(li);
 
         if (eq && eq.photoCount && eq.photoCount > 0) {
-            loadThumbnail(eq.id, `thumb-cart-${item.id}-${index}`);
+            loadThumbnail(eq.id, `thumb-cart-${item.equipmentId}-${index}`);
         } else {
-            const thumbEl = document.getElementById(`thumb-cart-${item.id}-${index}`);
+            const thumbEl = document.getElementById(`thumb-cart-${item.equipmentId}-${index}`);
             if (thumbEl) {
                 thumbEl.innerHTML = `<div class="h-8 w-8 bg-gray-100 flex items-center justify-center rounded text-gray-400 text-xs"><i class="fas fa-image"></i></div>`;
-
             }
         }
     });
     btn.disabled = false;
+    
+    // Update the dropdown to remove currently selected quantities
+    updateCheckoutEquipmentDropdown();
 }
 
 window.removeFromCart = function(index) {
