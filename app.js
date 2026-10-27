@@ -150,6 +150,10 @@ async function initData() {
                 eq.availableQty = eq.totalQty - currentlyOut;
             });
             
+            localStorage.setItem('mediaWingBackup', JSON.stringify({
+                equipment, programs, checkouts, fundAdditions, fundExpenses
+            }));
+
             updateDashboard();
             renderInventory();
             renderHistoryTable();
@@ -161,12 +165,35 @@ async function initData() {
         }
     } catch (err) {
         console.error("Error loading data from Firebase", err);
-        showToast('Error loading data. Check console.', 'error');
+        const localBackup = localStorage.getItem('mediaWingBackup');
+        if (localBackup) {
+            try {
+                const data = JSON.parse(localBackup);
+                equipment = data.equipment || [];
+                programs = data.programs || [];
+                checkouts = data.checkouts || [];
+                fundAdditions = data.fundAdditions || [];
+                fundExpenses = data.fundExpenses || [];
+                updateDashboard();
+                renderInventory();
+                renderHistoryTable();
+                renderFundsTab();
+                showToast('Offline backup loaded.', 'info');
+            } catch (e) {
+                console.error("Error parsing local backup", e);
+            }
+        } else {
+            showToast('Permission expired in Firebase. Please update Rules in Firebase Console.', 'error');
+        }
     }
 }
 
 async function saveData() {
     try {
+        localStorage.setItem('mediaWingBackup', JSON.stringify({
+            equipment, programs, checkouts, fundAdditions, fundExpenses
+        }));
+        
         const docRef = doc(db, "mediaWing", "mainData");
         await setDoc(docRef, {
             equipment,
