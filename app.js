@@ -967,6 +967,7 @@ function updateCheckoutEquipmentDropdown() {
     const currentSelection = eqSelect.value;
     
     eqSelect.innerHTML = '<option value="">-- Select Equipment --</option>';
+    let availableCount = 0;
     equipment.forEach(e => {
         let cartQty = 0;
         currentCheckoutCart.forEach(c => {
@@ -974,13 +975,25 @@ function updateCheckoutEquipmentDropdown() {
         });
         const effectiveAvailable = e.availableQty - cartQty;
         if (effectiveAvailable > 0) {
+            availableCount++;
             eqSelect.innerHTML += `<option value="${e.id}">${e.name} (Available: ${effectiveAvailable})</option>`;
         }
     });
+
+    if (availableCount > 0) {
+        eqSelect.innerHTML += '<option value="__ALL__">★ All Available Equipments (എല്ലാം ഒന്നിച്ച്)</option>';
+    }
     
     // Restore selection if it still exists
     if (currentSelection && eqSelect.querySelector(`option[value="${currentSelection}"]`)) {
         eqSelect.value = currentSelection;
+    } else {
+        const qtyInput = document.getElementById('checkout-qty');
+        if (qtyInput) {
+            qtyInput.disabled = false;
+            qtyInput.placeholder = 'Qty';
+            if (!qtyInput.value) qtyInput.value = 1;
+        }
     }
 }
 
@@ -1084,14 +1097,55 @@ window.removeAlreadyCheckedOut = function(eqId) {
     }
 }
 
-document.getElementById('add-to-checkout-btn').addEventListener('click', () => {
-    const eqId = document.getElementById('checkout-equipment-select').value;
-    const qty = parseInt(document.getElementById('checkout-qty').value);
+window.clearCheckoutCart = function() {
+    currentCheckoutCart = [];
+    renderCart();
+};
 
+function addAllAvailableToCart() {
+    let addedCount = 0;
+    equipment.forEach(item => {
+        const existing = currentCheckoutCart.find(i => i.equipmentId === item.id);
+        const currentCartQty = existing ? existing.qty : 0;
+        const availableToAdd = item.availableQty - currentCartQty;
+
+        if (availableToAdd > 0) {
+            if (existing) {
+                existing.qty += availableToAdd;
+            } else {
+                currentCheckoutCart.push({
+                    equipmentId: item.id,
+                    qty: availableToAdd,
+                    name: item.name
+                });
+            }
+            addedCount++;
+        }
+    });
+
+    if (addedCount === 0) {
+        alert('All available equipment are already added to the cart.');
+        return;
+    }
+
+    showToast('All available equipment added to cart!');
+    renderCart();
+}
+
+document.getElementById('add-to-checkout-btn')?.addEventListener('click', () => {
+    const eqId = document.getElementById('checkout-equipment-select').value;
     if (!eqId) return alert('Select equipment');
-    if (qty < 1) return alert('Quantity must be at least 1');
+
+    if (eqId === '__ALL__') {
+        addAllAvailableToCart();
+        return;
+    }
+
+    const qty = parseInt(document.getElementById('checkout-qty').value);
+    if (isNaN(qty) || qty < 1) return alert('Quantity must be at least 1');
 
     const item = equipment.find(e => e.id === eqId);
+    if (!item) return;
     
     const existing = currentCheckoutCart.find(i => i.equipmentId === eqId);
     const requestedTotal = existing ? existing.qty + qty : qty;
@@ -1109,16 +1163,38 @@ document.getElementById('add-to-checkout-btn').addEventListener('click', () => {
     renderCart();
 });
 
+document.getElementById('add-all-checkout-btn')?.addEventListener('click', () => {
+    addAllAvailableToCart();
+});
+
+document.getElementById('checkout-equipment-select')?.addEventListener('change', (e) => {
+    const qtyInput = document.getElementById('checkout-qty');
+    if (!qtyInput) return;
+    if (e.target.value === '__ALL__') {
+        qtyInput.disabled = true;
+        qtyInput.value = '';
+        qtyInput.placeholder = 'All';
+    } else {
+        qtyInput.disabled = false;
+        qtyInput.placeholder = 'Qty';
+        if (!qtyInput.value || qtyInput.value === '') qtyInput.value = 1;
+    }
+});
+
 function renderCart() {
     const cartEl = document.getElementById('checkout-cart');
     const btn = document.getElementById('confirm-checkout-btn');
+    const clearBtn = document.getElementById('clear-cart-btn');
 
     if (currentCheckoutCart.length === 0) {
         cartEl.innerHTML = '<li class="text-gray-500 text-sm p-2 text-center" id="empty-cart-msg">No items selected yet.</li>';
         btn.disabled = true;
+        if (clearBtn) clearBtn.classList.add('hidden');
         updateCheckoutEquipmentDropdown();
         return;
     }
+
+    if (clearBtn) clearBtn.classList.remove('hidden');
 
     cartEl.innerHTML = '';
     currentCheckoutCart.forEach((item, index) => {
